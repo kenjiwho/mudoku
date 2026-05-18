@@ -1,0 +1,28 @@
+image: node:20
+
+stages:
+  - build
+  - deploy
+
+# Stage 1: Build the Vue application using Bun
+build_game:
+  stage: build
+  script:
+    - npm install -g bun
+    - bun install
+    - bun run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+# Stage 2: Deploy the compiled files to Firebase
+deploy_hosting:
+  stage: deploy
+  dependencies:
+    - build_game
+  script:
+    - npm install -g firebase-tools
+    - firebase deploy --non-interactive --only hosting --token $FIREBASE_TOKEN
+  only:
+    - master
