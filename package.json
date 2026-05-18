@@ -15,6 +15,7 @@
     "format": "oxfmt src/"
   },
   "dependencies": {
+    "firebase": "^12.13.0",
     "vue": "^3.5.32"
   },
   "devDependencies": {

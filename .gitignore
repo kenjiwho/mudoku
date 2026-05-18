@@ -37,3 +37,12 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Firebase 
+.firebase/
+
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+
+.runtimeconfig.json
