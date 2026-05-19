@@ -1,10 +1,6 @@
-const sampleBoard = [
-  3, 7, 4, 2, 6, 1, 0, 0, 5, 0, 0, 0, 8, 0, 3, 1, 0, 4, 0, 8, 0, 4, 5, 9, 7, 3, 2, 0, 2, 0, 6, 0, 0,
-  9, 1, 0, 7, 6, 9, 1, 0, 4, 3, 5, 0, 5, 0, 3, 0, 0, 0, 2, 4, 6, 0, 4, 0, 5, 0, 0, 0, 7, 0, 0, 0, 0,
-  3, 4, 8, 0, 0, 1, 0, 3, 0, 7, 1, 0, 0, 0, 0,
-];
+import { shuffle } from './helper';
 
-function printBoard(boardState: number[]) {
+export function printBoard(boardState: number[]) {
   for (let i = 0; i < 9; i++) {
     console.log(boardState.slice(i * 9, i * 9 + 9));
   }
@@ -26,7 +22,7 @@ function validate(boardState: number[], idx: number): boolean {
    * Check if there are duplicates in an array of numbers.
    */
   function checkDuplicate(arr: number[]): boolean {
-    const seen = new Array(10).fill(false);
+    const seen = new Array<boolean>(10).fill(false);
 
     for (let i = 0; i < arr.length; i++) {
       const num = arr[i];
@@ -57,7 +53,7 @@ function validate(boardState: number[], idx: number): boolean {
   const column: number[] = [];
   for (let y_ = 0; y_ < 9; y_++) {
     const idx = y_ * 9 + x;
-    column.push(boardState[idx]);
+    column.push(boardState[idx]!);
   }
   if (checkDuplicate(column)) {
     return false;
@@ -72,14 +68,51 @@ function validate(boardState: number[], idx: number): boolean {
   for (let y_ = 0; y_ < 3; y_++) {
     for (let x_ = 0; x_ < 3; x_++) {
       const idx_ = startIdx + y_ * 9 + x_;
-      group.push(boardState[idx_]);
+      group.push(boardState[idx_]!);
     }
   }
-  if (checkDuplicate(column)) {
+  if (checkDuplicate(group)) {
     return false;
   }
 
   return true;
+}
+
+function getCandidates(boardState: number[], idx: number): number[] {
+  const candidates: number[] = [];
+  for (let num = 1; num <= 9; num++) {
+    boardState[idx] = num;
+    if (validate(boardState, idx)) {
+      candidates.push(num);
+    }
+  }
+  boardState[idx] = 0;
+  return candidates;
+}
+
+/**
+ * Find the empty cell with the fewest valid candidates (MRV heuristic).
+ * Returns null if the board is solved, or an object with the chosen
+ * cell index and its candidate list.
+ */
+function findBestCell(boardState: number[]): { idx: number; candidates: number[] } | null {
+  let bestIdx = -1;
+  let bestCandidates: number[] = [];
+
+  for (let i = 0; i < 81; i++) {
+    if (boardState[i] === 0) {
+      const candidates = getCandidates(boardState, i);
+      if (candidates.length === 0) return { idx: i, candidates: [] }; // dead end
+      if (candidates.length === 1) return { idx: i, candidates }; // forced move
+      if (bestIdx === -1 || candidates.length < bestCandidates.length) {
+        bestIdx = i;
+        bestCandidates = candidates;
+      }
+    }
+  }
+
+  if (bestIdx === -1) return null; // solved
+  return { idx: bestIdx, candidates: bestCandidates };
 }
 
 /**
@@ -89,51 +122,26 @@ function validate(boardState: number[], idx: number): boolean {
  * @returns The solved board state or null if there is none.
  */
 export function solve(boardState: number[]): number[] | null {
-  // A standard Fisher-Yates shuffle algorithm
-  function shuffle(array: any[]) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]]; // Swap elements
-    }
-    return array;
-  }
-
   function solveInner(boardState: number[]): boolean {
-    const idx = boardState.indexOf(0);
+    const best = findBestCell(boardState);
+    if (best === null) return true;
+    if (best.candidates.length === 0) return false;
 
-    if (idx < 0) {
-      return true;
-    }
-
-    if (boardState[idx] === undefined) {
-      boardState[idx] = 0;
-    }
-
-    const shuffledNums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
+    const idx = best.idx;
+    const shuffledNums = shuffle([...best.candidates]);
     let currNum = 0;
-
     boardState[idx] = shuffledNums[currNum];
 
-    // should first validate and then next solve recursion
-    while (!validate(boardState, idx) || !solveInner(boardState)) {
-      currNum++;
-      if (currNum > 8) {
-        boardState[idx] = 0;
-        return false;
-      }
-      boardState[idx] = shuffledNums[currNum];
+    for (const num of shuffle([...best.candidates])) {
+      boardState[idx] = num;
+      if (solveInner(boardState)) return true;
     }
-    return true;
+    boardState[idx] = 0;
+    return false;
   }
 
-  const boardCopy = Object.assign([], boardState);
-
-  const result = solveInner(boardCopy);
-
-  if (result) return boardCopy;
-
-  return null;
+  const boardCopy = [...boardState];
+  return solveInner(boardCopy) ? boardCopy : null;
 }
 
 /**
@@ -144,43 +152,26 @@ export function solve(boardState: number[]): number[] | null {
  */
 export function singleSolution(boardState: number[]): boolean {
   function singleSolutionInner(boardState: number[], acc: number): number {
-    const idx = boardState.indexOf(0);
+    const best = findBestCell(boardState);
+    if (best === null) return acc + 1;
+    if (best.candidates.length === 0) return acc;
 
-    if (idx < 0) {
-      return acc + 1;
-    }
+    const idx = best.idx;
 
-    if (boardState[idx] === undefined) {
-      boardState[idx] = 0;
-    }
-
-    boardState[idx]++;
-
-    while (true) {
-      if (validate(boardState, idx)) {
-        acc = singleSolutionInner(boardState, acc);
-        // if more than 1 solution found, immediately return
-        if (acc > 1) return acc;
-      }
-
-      boardState[idx]++;
-      if (boardState[idx] > 9) {
+    for (const num of best.candidates) {
+      boardState[idx] = num;
+      acc = singleSolutionInner(boardState, acc);
+      // if more than 1 solution found, immediately return
+      if (acc > 1) {
         boardState[idx] = 0;
         return acc;
       }
     }
+    boardState[idx] = 0;
+    return acc;
   }
 
   const boardCopy = Object.assign([], boardState);
 
   return singleSolutionInner(boardCopy, 0) == 1;
 }
-
-const solved = solve(sampleBoard);
-if (solved === null) {
-  throw 'NO SOLUTION';
-}
-printBoard(sampleBoard);
-printBoard(solved);
-
-console.log(singleSolution(sampleBoard));
