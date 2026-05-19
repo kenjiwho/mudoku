@@ -7,6 +7,8 @@ stages:
 # Stage 1: Build the Vue application using Bun
 build_game:
   stage: build
+  only:
+    - master
   script:
     - npm install -g bun
     - bun install
@@ -19,10 +21,10 @@ build_game:
 # Stage 2: Deploy the compiled files to Firebase
 deploy_hosting:
   stage: deploy
+  only:
+    - master
   dependencies:
     - build_game
   script:
     - npm install -g firebase-tools
     - firebase deploy --non-interactive --only hosting --token $FIREBASE_TOKEN
-  only:
-    - master
