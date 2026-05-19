@@ -83,12 +83,21 @@ function validate(boardState: number[], idx: number): boolean {
 }
 
 /**
- * Count solutions to a given sudoku boardState.
+ * Give a solution to a sudoku boardState.
  *
  * @param boardState - The sudoku to be solved.
  * @returns The solved board state or null if there is none.
  */
-function solve(boardState: number[]): number[] | null {
+export function solve(boardState: number[]): number[] | null {
+  // A standard Fisher-Yates shuffle algorithm
+  function shuffle(array: any[]) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+    }
+    return array;
+  }
+
   function solveInner(boardState: number[]): boolean {
     const idx = boardState.indexOf(0);
 
@@ -100,15 +109,20 @@ function solve(boardState: number[]): number[] | null {
       boardState[idx] = 0;
     }
 
-    boardState[idx]++;
+    const shuffledNums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    let currNum = 0;
+
+    boardState[idx] = shuffledNums[currNum];
 
     // should first validate and then next solve recursion
     while (!validate(boardState, idx) || !solveInner(boardState)) {
-      boardState[idx]++;
-      if (boardState[idx] > 9) {
+      currNum++;
+      if (currNum > 8) {
         boardState[idx] = 0;
         return false;
       }
+      boardState[idx] = shuffledNums[currNum];
     }
     return true;
   }
@@ -128,7 +142,7 @@ function solve(boardState: number[]): number[] | null {
  * @param boardState - The sudoku to be solved.
  * @returns true if single solution, false otherwise.
  */
-function singleSolution(boardState: number[]): boolean {
+export function singleSolution(boardState: number[]): boolean {
   function singleSolutionInner(boardState: number[], acc: number): number {
     const idx = boardState.indexOf(0);
 
