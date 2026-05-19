@@ -14,105 +14,27 @@ export function printBoard(boardState: number[]) {
  * @param idx - The index of the cell that will be validated.
  * @returns true if the board state is valid, false otherwise
  */
-function validate(boardState: number[], idx: number): boolean {
-  const x = idx % 9;
-  const y = Math.trunc(idx / 9);
+function isValidMove(boardState: number[], idx: number, num: number): boolean {
+  const row = Math.trunc(idx / 9);
+  const col = idx % 9;
 
-  /**
-   * Check if there are duplicates in an array of numbers.
-   */
-  function checkDuplicate(arr: number[]): boolean {
-    const seen = new Array<boolean>(10).fill(false);
+  const startRow = Math.trunc(row / 3) * 3;
+  const startCol = Math.trunc(col / 3) * 3;
 
-    for (let i = 0; i < arr.length; i++) {
-      const num = arr[i];
-      if (num === undefined) {
-        return false;
-      }
+  for (let i = 0; i < 9; i++) {
+    // 1. Check Row
+    if (boardState[row * 9 + i] === num) return false;
 
-      if (num == 0) continue;
+    // 2. Check Column
+    if (boardState[i * 9 + col] === num) return false;
 
-      if (seen[num]) {
-        return true;
-      }
-
-      seen[num] = true;
-    }
-
-    return false;
-  }
-
-  // check row
-  const rowStart = y * 9;
-  const row = boardState.slice(rowStart, rowStart + 9);
-  if (checkDuplicate(row)) {
-    return false;
-  }
-
-  // check column
-  const column: number[] = [];
-  for (let y_ = 0; y_ < 9; y_++) {
-    const idx = y_ * 9 + x;
-    column.push(boardState[idx]!);
-  }
-  if (checkDuplicate(column)) {
-    return false;
-  }
-
-  // check group
-  const group: number[] = [];
-  const groupX = Math.trunc(x / 3);
-  const groupY = Math.trunc(y / 3);
-
-  const startIdx = groupY * 27 + groupX * 3;
-  for (let y_ = 0; y_ < 3; y_++) {
-    for (let x_ = 0; x_ < 3; x_++) {
-      const idx_ = startIdx + y_ * 9 + x_;
-      group.push(boardState[idx_]!);
-    }
-  }
-  if (checkDuplicate(group)) {
-    return false;
+    // 3. Check 3x3 Box
+    const boxRow = startRow + Math.trunc(i / 3);
+    const boxCol = startCol + (i % 3);
+    if (boardState[boxRow * 9 + boxCol] === num) return false;
   }
 
   return true;
-}
-
-function getCandidates(boardState: number[], idx: number): number[] {
-  const candidates: number[] = [];
-  for (let num = 1; num <= 9; num++) {
-    boardState[idx] = num;
-    if (validate(boardState, idx)) {
-      candidates.push(num);
-    }
-  }
-  boardState[idx] = 0;
-  return candidates;
-}
-
-/**
- * Find the empty cell with the fewest valid candidates (MRV heuristic).
- * Returns null if the board is solved, or an object with the chosen
- * cell index and its candidate list.
- */
-function findBestCell(boardState: number[]): { idx: number; candidates: number[] } | null {
-  let bestIdx = -1;
-  let bestCandidates: number[] = [];
-
-  for (let i = 0; i < 81; i++) {
-    if (boardState[i] === 0) {
-      const candidates = getCandidates(boardState, i);
-      if (candidates.length === 0) return { idx: i, candidates: [] }; // dead end
-      if (candidates.length === 1) return { idx: i, candidates }; // forced move
-      if (bestIdx === -1 || candidates.length < bestCandidates.length) {
-        bestIdx = i;
-        bestCandidates = candidates;
-      }
-    }
-  }
-
-  if (bestIdx === -1) return null; // solved
-  return { idx: bestIdx, candidates: bestCandidates };
 }
 
 /**
@@ -123,18 +45,14 @@ function findBestCell(boardState: number[]): { idx: number; candidates: number[]
  */
 export function solve(boardState: number[]): number[] | null {
   function solveInner(boardState: number[]): boolean {
-    const best = findBestCell(boardState);
-    if (best === null) return true;
-    if (best.candidates.length === 0) return false;
+    const idx = boardState.indexOf(0);
+    if (idx == -1) return true;
 
-    const idx = best.idx;
-    const shuffledNums = shuffle([...best.candidates]);
-    let currNum = 0;
-    boardState[idx] = shuffledNums[currNum];
-
-    for (const num of shuffle([...best.candidates])) {
-      boardState[idx] = num;
-      if (solveInner(boardState)) return true;
+    for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+      if (isValidMove(boardState, idx, num)) {
+        boardState[idx] = num;
+        if (solveInner(boardState)) return true;
+      }
     }
     boardState[idx] = 0;
     return false;
@@ -152,26 +70,25 @@ export function solve(boardState: number[]): number[] | null {
  */
 export function singleSolution(boardState: number[]): boolean {
   function singleSolutionInner(boardState: number[], acc: number): number {
-    const best = findBestCell(boardState);
-    if (best === null) return acc + 1;
-    if (best.candidates.length === 0) return acc;
+    const idx = boardState.indexOf(0);
+    if (idx == -1) return acc + 1;
 
-    const idx = best.idx;
-
-    for (const num of best.candidates) {
-      boardState[idx] = num;
-      acc = singleSolutionInner(boardState, acc);
-      // if more than 1 solution found, immediately return
-      if (acc > 1) {
-        boardState[idx] = 0;
-        return acc;
+    for (let num = 1; num <= 9; num++) {
+      if (isValidMove(boardState, idx, num)) {
+        boardState[idx] = num;
+        acc = singleSolutionInner(boardState, acc);
+        // if more than 1 solution found, immediately return
+        if (acc > 1) {
+          boardState[idx] = 0;
+          return acc;
+        }
       }
     }
     boardState[idx] = 0;
     return acc;
   }
 
-  const boardCopy = Object.assign([], boardState);
+  const boardCopy = [...boardState];
 
   return singleSolutionInner(boardCopy, 0) == 1;
 }
