@@ -82,30 +82,91 @@ function validate(boardState: number[], idx: number): boolean {
   return true;
 }
 
-function solve(boardState: number[]): boolean {
-  const idx = boardState.indexOf(0);
+/**
+ * Count solutions to a given sudoku boardState.
+ *
+ * @param boardState - The sudoku to be solved.
+ * @returns The solved board state or null if there is none.
+ */
+function solve(boardState: number[]): number[] | null {
+  function solveInner(boardState: number[]): boolean {
+    const idx = boardState.indexOf(0);
 
-  if (idx < 0) {
+    if (idx < 0) {
+      return true;
+    }
+
+    if (boardState[idx] === undefined) {
+      boardState[idx] = 0;
+    }
+
+    boardState[idx]++;
+
+    // should first validate and then next solve recursion
+    while (!validate(boardState, idx) || !solveInner(boardState)) {
+      boardState[idx]++;
+      if (boardState[idx] > 9) {
+        boardState[idx] = 0;
+        return false;
+      }
+    }
     return true;
   }
 
-  if (boardState[idx] === undefined) {
-    boardState[idx] = 0;
-  }
+  const boardCopy = Object.assign([], boardState);
 
-  boardState[idx]++;
+  const result = solveInner(boardCopy);
 
-  while (true) {
-    if (validate(boardState, idx) && solve(boardState)) {
-      break;
-    }
-    boardState[idx]++;
-    if (boardState[idx] > 9) {
-      boardState[idx] = 0;
-      return false;
-    }
-  }
-  return true;
+  if (result) return boardCopy;
+
+  return null;
 }
-console.log(solve(sampleBoard));
+
+/**
+ * Check if there is only one solution for boardState.
+ *
+ * @param boardState - The sudoku to be solved.
+ * @returns true if single solution, false otherwise.
+ */
+function singleSolution(boardState: number[]): boolean {
+  function singleSolutionInner(boardState: number[], acc: number): number {
+    const idx = boardState.indexOf(0);
+
+    if (idx < 0) {
+      return acc + 1;
+    }
+
+    if (boardState[idx] === undefined) {
+      boardState[idx] = 0;
+    }
+
+    boardState[idx]++;
+
+    while (true) {
+      if (validate(boardState, idx)) {
+        acc = singleSolutionInner(boardState, acc);
+        // if more than 1 solution found, immediately return
+        if (acc > 1) return acc;
+      }
+
+      boardState[idx]++;
+      if (boardState[idx] > 9) {
+        boardState[idx] = 0;
+        return acc;
+      }
+    }
+  }
+
+  const boardCopy = Object.assign([], boardState);
+
+  return singleSolutionInner(boardCopy, 0) == 1;
+}
+
+const solved = solve(sampleBoard);
+if (solved === null) {
+  throw 'NO SOLUTION';
+}
 printBoard(sampleBoard);
+printBoard(solved);
+
+console.log(singleSolution(sampleBoard));
