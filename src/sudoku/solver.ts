@@ -12,6 +12,7 @@ export function printBoard(boardState: number[]) {
  *
  * @param boardState - The boardState in question.
  * @param idx - The index of the cell that will be validated.
+ * @param num - The number to fill into cell idx.
  * @returns true if the board state is valid, false otherwise
  */
 function isValidMove(boardState: number[], idx: number, num: number): boolean {
@@ -94,36 +95,97 @@ export function singleSolution(boardState: number[]): boolean {
 }
 
 /**
+ * Checks if a boardState is solved.
+ *
+ * @params - The boardState to check.
+ * @returns true if the boardState is solved, false otherwise.
+ */
+function solved(boardState: number[]) {
+  return !boardState.includes(0);
+}
+
+/**
+ * Get the candidate numbers that can be filled into boardState at index idx.
+ *
+ * @param boardState - The boardState in quesiton.
+ * @param idx - The index to search for candidates.
+ * @returns An array of candidates.
+ */
+function getCandidates(boardState: number[], idx: number): number[] {
+  const candidates: number[] = [];
+  for (let num = 1; num <= 9; num++) {
+    if (isValidMove(boardState, idx, num)) {
+      candidates.push(num);
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Find a naked single.
+ *
+ * @param boardState - The boardState to check.
+ * @returns The index of the naked single, -1 if none were found, and the number
+ *          that can be inserted.
+ */
+function findNakedSingle(boardState: number[]): [number, number] {
+  for (let idx = 0; idx < boardState.length; idx++) {
+    if (boardState[idx] != 0) {
+      continue;
+    }
+
+    const candidates = getCandidates(boardState, idx);
+
+    if (candidates.length == 1) {
+      return [idx, candidates[0]!];
+    }
+  }
+
+  return [-1, 0];
+}
+
+/**
  * Find a sequence of moves based on logic (naked singles/doubles, hidden singles, etc.) that solves a puzzle.
  *
- * @param - The boardState to solve.
+ * @param boardState - The boardState to solve.
  * @returns Sequence of moves that solves the puzzle.
  */
 export function logicSolve(boardState: number[]) {
-  // level 1:
-  // - naked singles
-  // - hidden singles
-  //
-  // level 2:
-  // - pointing pairs/pointing triples
-  // - box/line reduction
-  //
-  // level 3:
-  // - naked pairs
-  // - naked triples/quads
-  // - hidden pairs
-  // - hidden triples/quads
-  //
-  // level 4:
-  // - X-wing
-  // - Y-wing
-  // - swordfish
-  // - XYZ-wing
-  //
-  // level 5:
-  // - simple colors (single's chain)
-  // - XY-chain
-  // - forcing chains
-  // - jellyfish
-  // - unique rectangles (might not)
+  const boardCopy = [...boardState];
+
+  while (!solved(boardCopy)) {
+    // level 1:
+    // - naked singles
+    const [idx, candidate] = findNakedSingle(boardCopy);
+    if (idx != -1) {
+      boardCopy[idx] = candidate;
+    }
+
+    // - hidden singles
+
+    // level 2:
+    // - pointing pairs/pointing triples
+    // - box/line reduction
+    //
+    // level 3:
+    // - naked pairs
+    // - naked triples/quads
+    // - hidden pairs
+    // - hidden triples/quads
+    //
+    // level 4:
+    // - X-wing
+    // - Y-wing
+    // - swordfish
+    // - XYZ-wing
+    //
+    // level 5:
+    // - simple colors (single's chain)
+    // - XY-chain
+    // - forcing chains
+    // - jellyfish
+    // - unique rectangles (might not)
+  }
+
+  printBoard(boardCopy);
 }
