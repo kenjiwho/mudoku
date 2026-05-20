@@ -1,4 +1,4 @@
-import { dec2bin, locActiveBit, shuffle } from './helper';
+import { locActiveBit, shuffle } from './helper';
 
 export enum StepType {
   NAKEDSINGLE,
@@ -7,10 +7,8 @@ export enum StepType {
   HIDDENPAIR,
 }
 
-export class Board {
-  public userBoard: Uint8Array;
-  private solverBoard: Uint8Array;
-  public readonly startBoard: Uint8Array;
+export class Solver {
+  private board: Uint8Array = new Uint8Array(81).fill(0);
 
   public pencilMarks: Int32Array = new Int32Array(81).fill(0);
 
@@ -19,74 +17,129 @@ export class Board {
   private colMasks: Int32Array = new Int32Array(9).fill(0);
   private boxMasks: Int32Array = new Int32Array(9).fill(0);
 
-  constructor(board?: Uint8Array) {
-    if (board !== undefined) {
-      this.solverBoard = new Uint8Array(board);
-    } else {
-      this.solverBoard = new Uint8Array(81).fill(0);
+  /**
+   * Give a solution to a sudoku boardState.
+   *
+   * @param board - The board to solve.
+   * @returns The solved board state or null if there is none.
+   */
+  public solve(board: Uint8Array): Uint8Array | null {
+    const solveInner = (): boolean => {
+      const idx = this.board.indexOf(0);
+      if (idx == -1) return true;
 
-      // generate random sudoku puzzle
-      const generateInner = (): boolean => {
-        const idx = this.solverBoard.indexOf(0);
-        if (idx == -1) return true;
-
-        for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-          if (this.isValidMove(idx, num)) {
-            this.placeNumber(idx, num);
-            if (generateInner()) return true;
-            this.removeNumber(idx, num);
-          }
-        }
-        return false;
-      };
-      generateInner();
-
-      const indexes = shuffle(Array.from({ length: this.solverBoard.length }, (_, i) => i));
-      for (const idx of indexes) {
-        const num: number = this.solverBoard[idx]!;
-        this.removeNumber(idx, num);
-
-        if (!this.singleSolution()) {
+      for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+        if (this.isValidMove(idx, num)) {
           this.placeNumber(idx, num);
+          if (solveInner()) return true;
+          this.removeNumber(idx, num);
         }
+      }
+      return false;
+    };
+
+    this.board = new Uint8Array(board);
+    this.initializeMasks();
+
+    return solveInner() ? this.board : null;
+  }
+
+  /**
+   * Find a sequence of moves based on logic (naked singles/doubles, hidden singles, etc.) that solves a puzzle.
+   *
+   * @param boardState - The boardState to solve.
+   * @returns Sequence of moves that solves the puzzle, null if none exists.
+   */
+  public logicSolve(board: Uint8Array): [StepType, number, number][] | null {
+    this.board = new Uint8Array(board);
+    this.initializeMasks();
+    this.initializePencilMarks();
+
+    // (step type, index, candidate)
+    const solution: [StepType, number, number][] = [];
+    while (!this.solved()) {
+      // level 1:
+      // - naked singles
+      let step = this.findNakedSingle();
+      if (step[1] != -1) {
+        solution.push(step);
+        this.placeNumber(step[1], step[2], true);
+        continue;
+      }
+
+      // - hidden singles
+      step = this.findHiddenSingle();
+      if (step[1] != -1) {
+        solution.push(step);
+        this.placeNumber(step[1], step[2], true);
+        continue;
+      }
+
+      // level 2:
+      // - naked pairs
+      step = this.findNakedPair();
+      if (step[1] != -1) {
+        solution.push(step);
+        this.placeNumber(step[1], step[2], true);
+        continue;
+      }
+
+      // - naked triples
+      // - hidden pairs
+      // - hidden triples
+      //
+      // level 3:
+      // - pointing pairs/pointing triples
+      // - box/line reduction
+      // - naked quad
+      // - hidden quad
+      //
+      // level 4:
+      // - X-wing
+      // - Y-wing
+      // - swordfish
+      // - XYZ-wing
+      //
+      // level 5:
+      // - simple colors (single's chain)
+      // - XY-chain
+      // - forcing chains
+      // - jellyfish
+      // - unique rectangles (might not)
+
+      return null;
+    }
+
+    console.log();
+    console.log(this.toString());
+    console.log();
+
+    return solution;
+  }
+
+  toString(): string {
+    let str = '';
+    for (let j = 0; j < 9; j++) {
+      for (let i = 0; i < 9; i++) {
+        const idx = j * 9 + i;
+        if (i !== 0) {
+          str = str + ' ';
+        }
+        str = str + `${this.board[idx]}`;
+        if ((i + 1) % 3 === 0) {
+          str = str + ' ';
+        }
+      }
+      if (j === 8) {
+        break;
+      }
+      str = str + '\n';
+      if ((j + 1) % 3 === 0) {
+        str = str + '\n';
       }
     }
 
-    this.startBoard = new Uint8Array(this.solverBoard);
-    this.userBoard = new Uint8Array(this.solverBoard);
-  }
-
-  /**
-   * Create copy of this.board and its masks.
-   *
-   * @returns A copy of this.board and its masks.
-   */
-  public copyBoard(): [Uint8Array, Int32Array, Int32Array, Int32Array, Int32Array] {
-    const boardCopy = new Uint8Array(this.solverBoard);
-    const pencilMarksCopy = new Int32Array(this.pencilMarks);
-    const rowMasksCopy = new Int32Array(this.rowMasks);
-    const colMasksCopy = new Int32Array(this.colMasks);
-    const boxMasksCopy = new Int32Array(this.boxMasks);
-
-    return [boardCopy, pencilMarksCopy, rowMasksCopy, colMasksCopy, boxMasksCopy];
-  }
-
-  /**
-   * Reset the internal board to the start state.
-   *
-   * @param boardState - boardState and masks to revert to.
-   */
-  public resetBoard(boardInfo: [Uint8Array, Int32Array, Int32Array, Int32Array, Int32Array]) {
-    const board = boardInfo[0];
-    const pencilMarks = boardInfo[1];
-    const rowMasks = boardInfo[2];
-    const colMasks = boardInfo[3];
-    const boxMasks = boardInfo[4];
-    this.solverBoard = new Uint8Array(board);
-    this.pencilMarks = new Int32Array(pencilMarks);
-    this.rowMasks = new Int32Array(rowMasks);
-    this.colMasks = new Int32Array(colMasks);
-    this.boxMasks = new Int32Array(boxMasks);
+    return str;
   }
 
   /**
@@ -97,8 +150,8 @@ export class Board {
     this.colMasks = new Int32Array(9).fill(0);
     this.boxMasks = new Int32Array(9).fill(0);
 
-    for (let i = 0; i < this.solverBoard.length; i++) {
-      const num = this.solverBoard[i]!;
+    for (let i = 0; i < this.board.length; i++) {
+      const num = this.board[i]!;
       if (num != 0) {
         const row = Math.trunc(i / 9);
         const col = i % 9;
@@ -118,8 +171,8 @@ export class Board {
   private initializePencilMarks() {
     this.pencilMarks = new Int32Array(81).fill(0);
 
-    for (let i = 0; i < this.solverBoard.length; i++) {
-      if (this.solverBoard[i] === 0) {
+    for (let i = 0; i < this.board.length; i++) {
+      if (this.board[i] === 0) {
         const row = Math.trunc(i / 9);
         const col = i % 9;
         const box = this.getBoxIndex(row, col);
@@ -142,7 +195,7 @@ export class Board {
     const col = idx % 9;
     const box = this.getBoxIndex(row, col);
 
-    this.solverBoard[idx] = num;
+    this.board[idx] = num;
 
     const bit = 1 << num;
     this.rowMasks[row]! |= bit;
@@ -165,7 +218,7 @@ export class Board {
     const col = idx % 9;
     const box = this.getBoxIndex(row, col);
 
-    this.solverBoard[idx] = 0;
+    this.board[idx] = 0;
 
     const bit = 1 << num;
     this.rowMasks[row]! &= ~bit;
@@ -210,7 +263,7 @@ export class Board {
     bit: number,
     add: boolean,
   ) {
-    if (this.solverBoard[idx] !== 0) return;
+    if (this.board[idx] !== 0) return;
 
     if (add) {
       const taken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
@@ -229,63 +282,6 @@ export class Board {
    */
   private getBoxIndex(row: number, col: number): number {
     return Math.trunc(row / 3) * 3 + Math.trunc(col / 3);
-  }
-
-  /**
-   * Give a solution to a sudoku boardState.
-   *
-   * @returns The solved board state or null if there is none.
-   */
-  public solve(): Uint8Array | null {
-    const solveInner = (): boolean => {
-      const idx = this.solverBoard.indexOf(0);
-      if (idx == -1) return true;
-
-      for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-        if (this.isValidMove(idx, num)) {
-          this.placeNumber(idx, num);
-          if (solveInner()) return true;
-          this.removeNumber(idx, num);
-        }
-      }
-      return false;
-    };
-
-    this.solverBoard = new Uint8Array(this.userBoard);
-    this.initializeMasks();
-
-    return solveInner() ? this.solverBoard : null;
-  }
-
-  /**
-   * Check if there is only one solution for boardState.
-   *
-   * @returns true if single solution, false otherwise.
-   */
-  private singleSolution(): boolean {
-    const singleSolutionInner = (acc: number): number => {
-      const idx = this.solverBoard.indexOf(0);
-      if (idx == -1) return acc + 1;
-
-      for (let num = 1; num <= 9; num++) {
-        if (this.isValidMove(idx, num)) {
-          this.placeNumber(idx, num);
-          acc = singleSolutionInner(acc);
-          this.removeNumber(idx, num);
-          // if more than 1 solution found, immediately return
-          if (acc > 1) {
-            return acc;
-          }
-        }
-      }
-      return acc;
-    };
-
-    const boardInfo = this.copyBoard();
-    const result = singleSolutionInner(0) == 1;
-    this.resetBoard(boardInfo);
-
-    return result;
   }
 
   /**
@@ -308,36 +304,12 @@ export class Board {
   }
 
   /**
-   * Get the candidate numbers that can be filled into boardState at index idx.
-   *
-   * @param idx - The index to search for candidates.
-   * @returns An array of candidates.
-   */
-  private getCandidates(idx: number): number[] {
-    const row = Math.trunc(idx / 9);
-    const col = idx % 9;
-    const box = this.getBoxIndex(row, col);
-
-    const allTaken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
-    const available = ~allTaken;
-
-    const candidates: number[] = [];
-    for (let num = 1; num <= 9; num++) {
-      if ((available & (1 << num)) !== 0) {
-        candidates.push(num);
-      }
-    }
-
-    return candidates;
-  }
-
-  /**
    * Checks if a boardState is solved.
    *
    * @returns true if the boardState is solved, false otherwise.
    */
   private solved() {
-    return !this.solverBoard.includes(0);
+    return !this.board.includes(0);
   }
 
   /**
@@ -347,8 +319,8 @@ export class Board {
    *          number that can be inserted.
    */
   private findNakedSingle(): [StepType, number, number] {
-    for (let idx = 0; idx < this.solverBoard.length; idx++) {
-      if (this.solverBoard[idx] !== 0) {
+    for (let idx = 0; idx < this.board.length; idx++) {
+      if (this.board[idx] !== 0) {
         continue;
       }
 
@@ -419,7 +391,7 @@ export class Board {
     let duplicate = 0;
 
     for (const idx of groupIndices) {
-      if (this.solverBoard[idx] !== 0) continue;
+      if (this.board[idx] !== 0) continue;
 
       const cellPencilMarks = this.pencilMarks[idx]!;
 
@@ -431,7 +403,7 @@ export class Board {
 
     if (unique !== 0) {
       for (const idx of groupIndices) {
-        if (this.solverBoard[idx] !== 0) continue;
+        if (this.board[idx] !== 0) continue;
 
         const foundBit = this.pencilMarks[idx]! & unique;
         if (foundBit !== 0) return [idx, locActiveBit(foundBit)];
@@ -443,107 +415,5 @@ export class Board {
 
   private findNakedPair(): [StepType, number, number] {
     return [StepType.NAKEDPAIR, -1, 0];
-  }
-
-  /**
-   * Find a sequence of moves based on logic (naked singles/doubles, hidden singles, etc.) that solves a puzzle.
-   *
-   * @param boardState - The boardState to solve.
-   * @returns Sequence of moves that solves the puzzle, null if none exists.
-   */
-  public logicSolve(): [StepType, number, number][] | null {
-    this.solverBoard = new Uint8Array(this.userBoard);
-    this.initializeMasks();
-    this.initializePencilMarks();
-
-    // (step type, index, candidate)
-    const solution: [StepType, number, number][] = [];
-    while (!this.solved()) {
-      // level 1:
-      // - naked singles
-      let step = this.findNakedSingle();
-      if (step[1] != -1) {
-        solution.push(step);
-        this.placeNumber(step[1], step[2], true);
-        continue;
-      }
-
-      // - hidden singles
-      step = this.findHiddenSingle();
-      if (step[1] != -1) {
-        solution.push(step);
-        this.placeNumber(step[1], step[2], true);
-        continue;
-      }
-
-      // level 2:
-      // - naked pairs
-      step = this.findNakedPair();
-      if (step[1] != -1) {
-        solution.push(step);
-        this.placeNumber(step[1], step[2], true);
-        continue;
-      }
-
-      // - naked triples
-      // - hidden pairs
-      // - hidden triples
-      //
-      // level 3:
-      // - pointing pairs/pointing triples
-      // - box/line reduction
-      // - naked quad
-      // - hidden quad
-      //
-      // level 4:
-      // - X-wing
-      // - Y-wing
-      // - swordfish
-      // - XYZ-wing
-      //
-      // level 5:
-      // - simple colors (single's chain)
-      // - XY-chain
-      // - forcing chains
-      // - jellyfish
-      // - unique rectangles (might not)
-
-      return null;
-    }
-
-    console.log();
-    console.log(this.toString(this.solverBoard));
-    console.log();
-
-    return solution;
-  }
-
-  toString(boardState?: Uint8Array): string {
-    if (boardState === undefined) {
-      boardState = this.userBoard;
-    }
-
-    let str = '';
-    for (let j = 0; j < 9; j++) {
-      for (let i = 0; i < 9; i++) {
-        const idx = j * 9 + i;
-        if (i !== 0) {
-          str = str + ' ';
-        }
-        str = str + `${boardState[idx]}`;
-        if ((i + 1) % 3 === 0) {
-          str = str + ' ';
-        }
-      }
-      if (j === 8) {
-        break;
-      }
-      str = str + '\n';
-      if ((j + 1) % 3 === 0) {
-        str = str + '\n';
-      }
-    }
-
-    return str;
   }
 }
