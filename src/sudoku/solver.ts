@@ -121,6 +121,11 @@ function getCandidates(boardState: number[], idx: number): number[] {
   return candidates;
 }
 
+enum StepType {
+  NAKEDSINGLE,
+  HIDDENSINGLE,
+}
+
 /**
  * Find a naked single.
  *
@@ -128,7 +133,7 @@ function getCandidates(boardState: number[], idx: number): number[] {
  * @returns The index of the naked single, -1 if none were found, and the number
  *          that can be inserted.
  */
-function findNakedSingle(boardState: number[]): [number, number] {
+function findNakedSingle(boardState: number[]): [StepType, number, number] {
   for (let idx = 0; idx < boardState.length; idx++) {
     if (boardState[idx] != 0) {
       continue;
@@ -137,11 +142,86 @@ function findNakedSingle(boardState: number[]): [number, number] {
     const candidates = getCandidates(boardState, idx);
 
     if (candidates.length == 1) {
-      return [idx, candidates[0]!];
+      return [StepType.NAKEDSINGLE, idx, candidates[0]!];
     }
   }
 
-  return [-1, 0];
+  return [StepType.NAKEDSINGLE, -1, 0];
+}
+
+function findHiddenSingle(boardState: number[]): [StepType, number, number] {
+  const rowCols: [number, number][] = [
+    [0, 0],
+    [1, 3],
+    [2, 6],
+    [3, 1],
+    [4, 4],
+    [5, 7],
+    [6, 2],
+    [7, 5],
+    [8, 8],
+  ];
+
+  for (const [row, col] of rowCols) {
+    const startRow = Math.trunc(row / 3) * 3;
+    const startCol = Math.trunc(col / 3) * 3;
+
+    const rowCounts = Array(10).fill(0);
+    const rowLastSeen = Array(10).fill(0);
+    const colCounts = Array(10).fill(0);
+    const colLastSeen = Array(10).fill(0);
+    const boxCounts = Array(10).fill(0);
+    const boxLastSeen = Array(10).fill(0);
+
+    for (let i = 0; i < 9; i++) {
+      // 1. Check Row
+      const rowIdx = row * 9 + i;
+      if (boardState[rowIdx] === 0) {
+        const candidates = getCandidates(boardState, rowIdx);
+        for (const num of candidates) {
+          rowCounts[num]++;
+          rowLastSeen[num] = rowIdx;
+        }
+      }
+
+      // 2. Check Column
+      const colIdx = i * 9 + col;
+      if (boardState[colIdx] === 0) {
+        const candidates = getCandidates(boardState, colIdx);
+        for (const num of candidates) {
+          colCounts[num]++;
+          colLastSeen[num] = colIdx;
+        }
+      }
+
+      // 3. Check 3x3 Box
+      const boxRow = startRow + Math.trunc(i / 3);
+      const boxCol = startCol + (i % 3);
+      const boxIdx = boxRow * 9 + boxCol;
+      if (boardState[boxIdx] === 0) {
+        const candidates = getCandidates(boardState, boxIdx);
+        for (const num of candidates) {
+          boxCounts[num]++;
+          boxLastSeen[num] = boxIdx;
+        }
+      }
+    }
+
+    // Check for number that appears once
+    for (let num = 1; num <= 9; num++) {
+      if (rowCounts[num] === 1) {
+        const targetIndex = rowLastSeen[num];
+        return [StepType.HIDDENSINGLE, targetIndex, num];
+      } else if (colCounts[num] === 1) {
+        const targetIndex = colLastSeen[num];
+        return [StepType.HIDDENSINGLE, targetIndex, num];
+      } else if (boxCounts[num] === 1) {
+        const targetIndex = boxLastSeen[num];
+        return [StepType.HIDDENSINGLE, targetIndex, num];
+      }
+    }
+  }
+  return [StepType.HIDDENSINGLE, -1, 0];
 }
 
 /**
@@ -153,15 +233,25 @@ function findNakedSingle(boardState: number[]): [number, number] {
 export function logicSolve(boardState: number[]) {
   const boardCopy = [...boardState];
 
+  // (step type, index, candidate)
+  const solution: [StepType, number, number][] = [];
   while (!solved(boardCopy)) {
     // level 1:
     // - naked singles
-    const [idx, candidate] = findNakedSingle(boardCopy);
-    if (idx != -1) {
-      boardCopy[idx] = candidate;
+    let step = findNakedSingle(boardCopy);
+    if (step[1] != -1) {
+      solution.push(step);
+      boardCopy[step[1]] = step[2];
+      continue;
     }
 
     // - hidden singles
+    step = findHiddenSingle(boardCopy);
+    if (step[1] != -1) {
+      solution.push(step);
+      boardCopy[step[1]] = step[2];
+      continue;
+    }
 
     // level 2:
     // - pointing pairs/pointing triples
@@ -185,7 +275,30 @@ export function logicSolve(boardState: number[]) {
     // - forcing chains
     // - jellyfish
     // - unique rectangles (might not)
+
+    throw 'NO SOLUTION';
   }
 
-  printBoard(boardCopy);
+  return solution;
+}
+
+export function printSolution(solution: [StepType, number, number][]) {
+  for (const step of solution) {
+    const idx = step[1];
+    const x = (idx % 9) + 1;
+    const y = Math.trunc(idx / 9) + 1;
+
+    switch (step[0]) {
+      case StepType.NAKEDSINGLE:
+        console.log(`Naked single at (${x}, ${y}): ${step[2]}`);
+        break;
+
+      case StepType.HIDDENSINGLE:
+        console.log(`Hidden single at (${x}, ${y}): ${step[2]}`);
+        break;
+
+      default:
+        break;
+    }
+  }
 }
