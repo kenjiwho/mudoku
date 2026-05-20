@@ -1,4 +1,4 @@
-import { dec2bin, shuffle } from './helper';
+import { dec2bin, locActiveBit, shuffle } from './helper';
 
 export enum StepType {
   NAKEDSINGLE,
@@ -7,7 +7,7 @@ export enum StepType {
   HIDDENPAIR,
 }
 
-export class Sudoku {
+export class Board {
   public userBoard: Uint8Array;
   private solverBoard: Uint8Array;
   public readonly startBoard: Uint8Array;
@@ -234,7 +234,6 @@ export class Sudoku {
   /**
    * Give a solution to a sudoku boardState.
    *
-   * @param boardState - The sudoku to be solved.
    * @returns The solved board state or null if there is none.
    */
   public solve(): Uint8Array | null {
@@ -261,7 +260,6 @@ export class Sudoku {
   /**
    * Check if there is only one solution for boardState.
    *
-   * @param boardState - The sudoku to be solved.
    * @returns true if single solution, false otherwise.
    */
   private singleSolution(): boolean {
@@ -293,7 +291,6 @@ export class Sudoku {
   /**
    * Checks if a board is valid from the perspective of cell idx.
    *
-   * @param boardState - The boardState in question.
    * @param idx - The index of the cell that will be validated.
    * @param num - The number to fill into cell idx.
    * @returns true if the board state is valid, false otherwise
@@ -313,7 +310,6 @@ export class Sudoku {
   /**
    * Get the candidate numbers that can be filled into boardState at index idx.
    *
-   * @param boardState - The boardState in quesiton.
    * @param idx - The index to search for candidates.
    * @returns An array of candidates.
    */
@@ -338,7 +334,6 @@ export class Sudoku {
   /**
    * Checks if a boardState is solved.
    *
-   * @params - The boardState to check.
    * @returns true if the boardState is solved, false otherwise.
    */
   private solved() {
@@ -348,9 +343,8 @@ export class Sudoku {
   /**
    * Find a naked single.
    *
-   * @param boardState - The boardState to check.
-   * @returns The index of the naked single, -1 if none were found, and the number
-   *          that can be inserted.
+   * @returns The index of the naked single, -1 if none were found, and the
+   *          number that can be inserted.
    */
   private findNakedSingle(): [StepType, number, number] {
     for (let idx = 0; idx < this.solverBoard.length; idx++) {
@@ -364,88 +358,87 @@ export class Sudoku {
       // 8 - 1: 0111
       // n & (n - 1) -> 1000 & 0111 = 0
       if (marks > 0 && (marks & (marks - 1)) === 0) {
-        // 31 - Math.clz32(num) gets the position of the active bit
-        // 8: 1000 -> 3
-        return [StepType.NAKEDSINGLE, idx, 31 - Math.clz32(marks)];
+        return [StepType.NAKEDSINGLE, idx, locActiveBit(marks)];
       }
     }
 
     return [StepType.NAKEDSINGLE, -1, 0];
   }
 
+  /**
+   * Find a hidden single.
+   *
+   * @returns The index of the hiddne single, -1 if none were found, and the
+   *          number that can be inserted.
+   */
   private findHiddenSingle(): [StepType, number, number] {
-    const rowCols: [number, number][] = [
-      [0, 0],
-      [1, 3],
-      [2, 6],
-      [3, 1],
-      [4, 4],
-      [5, 7],
-      [6, 2],
-      [7, 5],
-      [8, 8],
-    ];
+    let [idx, num] = [0, 0];
 
-    for (const [row, col] of rowCols) {
-      const startRow = Math.trunc(row / 3) * 3;
-      const startCol = Math.trunc(col / 3) * 3;
+    // check rows
+    for (let i = 0; i < 9; i++) {
+      const arrStart = i * 9;
+      const row = Array.from({ length: 9 }, (_, j) => arrStart + j);
 
-      const rowCounts = Array(10).fill(0);
-      const rowLastSeen = Array(10).fill(0);
-      const colCounts = Array(10).fill(0);
-      const colLastSeen = Array(10).fill(0);
-      const boxCounts = Array(10).fill(0);
-      const boxLastSeen = Array(10).fill(0);
+      [idx, num] = this.findHiddenSingleGroup(row);
+      if (idx !== -1) return [StepType.HIDDENSINGLE, idx, num];
+    }
 
-      for (let i = 0; i < 9; i++) {
-        // 1. Check Row
-        const rowIdx = row * 9 + i;
-        if (this.solverBoard[rowIdx] === 0) {
-          const candidates = this.getCandidates(rowIdx);
-          for (const num of candidates) {
-            rowCounts[num]++;
-            rowLastSeen[num] = rowIdx;
-          }
-        }
+    // check columns
+    for (let i = 0; i < 9; i++) {
+      const col = Array.from({ length: 9 }, (_, j) => j * 9 + i);
 
-        // 2. Check Column
-        const colIdx = i * 9 + col;
-        if (this.solverBoard[colIdx] === 0) {
-          const candidates = this.getCandidates(colIdx);
-          for (const num of candidates) {
-            colCounts[num]++;
-            colLastSeen[num] = colIdx;
-          }
-        }
+      [idx, num] = this.findHiddenSingleGroup(col);
+      if (idx !== -1) return [StepType.HIDDENSINGLE, idx, num];
+    }
 
-        // 3. Check 3x3 Box
-        const boxRow = startRow + Math.trunc(i / 3);
-        const boxCol = startCol + (i % 3);
-        const boxIdx = boxRow * 9 + boxCol;
-        if (this.solverBoard[boxIdx] === 0) {
-          const candidates = this.getCandidates(boxIdx);
-          for (const num of candidates) {
-            boxCounts[num]++;
-            boxLastSeen[num] = boxIdx;
-          }
-        }
-      }
+    // check boxes
+    for (let i = 0; i < 9; i++) {
+      const startRow = Math.trunc(i / 3) * 3;
+      const startCol = (i % 3) * 3;
+      const box = Array.from(
+        { length: 9 },
+        (_, j) => (startRow + Math.trunc(j / 3)) * 9 + (startCol + (j % 3)),
+      );
 
-      // Check for number that appears once
-      for (let num = 1; num <= 9; num++) {
-        if (rowCounts[num] === 1) {
-          const targetIndex = rowLastSeen[num];
-          return [StepType.HIDDENSINGLE, targetIndex, num];
-        } else if (colCounts[num] === 1) {
-          const targetIndex = colLastSeen[num];
-          return [StepType.HIDDENSINGLE, targetIndex, num];
-        } else if (boxCounts[num] === 1) {
-          const targetIndex = boxLastSeen[num];
-          return [StepType.HIDDENSINGLE, targetIndex, num];
-        }
+      [idx, num] = this.findHiddenSingleGroup(box);
+      if (idx !== -1) return [StepType.HIDDENSINGLE, idx, num];
+    }
+
+    return [StepType.HIDDENSINGLE, -1, 0];
+  }
+
+  /**
+   * Find a hidden single in an array.
+   *
+   * @param groupIndices - The group in which to search for a hidden single.
+   * @returns The index of the hidden single, -1 if none were found, and the
+   *          number that can be inserted.
+   */
+  private findHiddenSingleGroup(groupIndices: number[]): [number, number] {
+    let all = 0;
+    let duplicate = 0;
+
+    for (const idx of groupIndices) {
+      if (this.solverBoard[idx] !== 0) continue;
+
+      const cellPencilMarks = this.pencilMarks[idx]!;
+
+      duplicate |= all & cellPencilMarks;
+      all |= cellPencilMarks;
+    }
+
+    const unique = all & ~duplicate;
+
+    if (unique !== 0) {
+      for (const idx of groupIndices) {
+        if (this.solverBoard[idx] !== 0) continue;
+
+        const foundBit = this.pencilMarks[idx]! & unique;
+        if (foundBit !== 0) return [idx, locActiveBit(foundBit)];
       }
     }
-    return [StepType.HIDDENSINGLE, -1, 0];
+
+    return [-1, 0];
   }
 
   private findNakedPair(): [StepType, number, number] {
