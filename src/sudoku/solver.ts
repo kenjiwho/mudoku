@@ -92,3 +92,38 @@ export function singleSolution(boardState: number[]): boolean {
 
   return singleSolutionInner(boardCopy, 0) == 1;
 }
+
+/**
+ * Find a sequence of moves based on logic (naked singles/doubles, hidden singles, etc.) that solves a puzzle.
+ *
+ * @param - The boardState to solve.
+ * @returns Sequence of moves that solves the puzzle.
+ */
+export function logicSolve(boardState: number[]) {
+  // level 1:
+  // - naked singles
+  // - hidden singles
+  //
+  // level 2:
+  // - pointing pairs/pointing triples
+  // - box/line reduction
+  //
+  // level 3:
+  // - naked pairs
+  // - naked triples/quads
+  // - hidden pairs
+  // - hidden triples/quads
+  //
+  // level 4:
+  // - X-wing
+  // - Y-wing
+  // - swordfish
+  // - XYZ-wing
+  //
+  // level 5:
+  // - simple colors (single's chain)
+  // - XY-chain
+  // - forcing chains
+  // - jellyfish
+  // - unique rectangles (might not)
+}
