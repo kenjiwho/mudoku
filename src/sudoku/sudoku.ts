@@ -1,4 +1,4 @@
-import { shuffle } from './helper';
+import { dec2bin, shuffle } from './helper';
 
 export enum StepType {
   NAKEDSINGLE,
@@ -8,32 +8,26 @@ export enum StepType {
 }
 
 export class Sudoku {
-  public board: Uint8Array;
+  public userBoard: Uint8Array;
+  private solverBoard: Uint8Array;
   public readonly startBoard: Uint8Array;
 
+  public pencilMarks: Int32Array = new Int32Array(81).fill(0);
+
   // bitmask cache
-  private rowMasks: Int32Array;
-  private colMasks: Int32Array;
-  private boxMasks: Int32Array;
-  private startRowMasks: Int32Array;
-  private startColMasks: Int32Array;
-  private startBoxMasks: Int32Array;
+  private rowMasks: Int32Array = new Int32Array(9).fill(0);
+  private colMasks: Int32Array = new Int32Array(9).fill(0);
+  private boxMasks: Int32Array = new Int32Array(9).fill(0);
 
   constructor(board?: Uint8Array) {
-    this.rowMasks = new Int32Array(9);
-    this.colMasks = new Int32Array(9);
-    this.boxMasks = new Int32Array(9);
-
     if (board !== undefined) {
-      this.board = new Uint8Array(board);
-      this.initializeMasks();
+      this.solverBoard = new Uint8Array(board);
     } else {
-      this.board = new Uint8Array(81).fill(0);
-      this.initializeMasks();
+      this.solverBoard = new Uint8Array(81).fill(0);
 
       // generate random sudoku puzzle
       const generateInner = (): boolean => {
-        const idx = this.board.indexOf(0);
+        const idx = this.solverBoard.indexOf(0);
         if (idx == -1) return true;
 
         for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
@@ -47,9 +41,9 @@ export class Sudoku {
       };
       generateInner();
 
-      const indexes = shuffle(Array.from({ length: 81 }, (_, i) => i));
+      const indexes = shuffle(Array.from({ length: this.solverBoard.length }, (_, i) => i));
       for (const idx of indexes) {
-        const num: number = this.board[idx]!;
+        const num: number = this.solverBoard[idx]!;
         this.removeNumber(idx, num);
 
         if (!this.singleSolution()) {
@@ -58,10 +52,8 @@ export class Sudoku {
       }
     }
 
-    this.startBoard = new Uint8Array(this.board);
-    this.startRowMasks = new Int32Array(this.rowMasks);
-    this.startColMasks = new Int32Array(this.colMasks);
-    this.startBoxMasks = new Int32Array(this.boxMasks);
+    this.startBoard = new Uint8Array(this.solverBoard);
+    this.userBoard = new Uint8Array(this.solverBoard);
   }
 
   /**
@@ -69,13 +61,14 @@ export class Sudoku {
    *
    * @returns A copy of this.board and its masks.
    */
-  public copyBoard(): [Uint8Array, Int32Array, Int32Array, Int32Array] {
-    const boardCopy = new Uint8Array(this.board);
+  public copyBoard(): [Uint8Array, Int32Array, Int32Array, Int32Array, Int32Array] {
+    const boardCopy = new Uint8Array(this.solverBoard);
+    const pencilMarksCopy = new Int32Array(this.pencilMarks);
     const rowMasksCopy = new Int32Array(this.rowMasks);
     const colMasksCopy = new Int32Array(this.colMasks);
     const boxMasksCopy = new Int32Array(this.boxMasks);
 
-    return [boardCopy, rowMasksCopy, colMasksCopy, boxMasksCopy];
+    return [boardCopy, pencilMarksCopy, rowMasksCopy, colMasksCopy, boxMasksCopy];
   }
 
   /**
@@ -83,26 +76,29 @@ export class Sudoku {
    *
    * @param boardState - boardState and masks to revert to.
    */
-  public resetBoard(boardInfo?: [Uint8Array, Int32Array, Int32Array, Int32Array]) {
-    if (boardInfo === undefined) {
-      boardInfo = [this.startBoard, this.startRowMasks, this.startColMasks, this.startBoxMasks];
-    }
+  public resetBoard(boardInfo: [Uint8Array, Int32Array, Int32Array, Int32Array, Int32Array]) {
     const board = boardInfo[0];
-    const rowMasks = boardInfo[1];
-    const colMasks = boardInfo[2];
-    const boxMasks = boardInfo[3];
-    this.board = new Uint8Array(board);
+    const pencilMarks = boardInfo[1];
+    const rowMasks = boardInfo[2];
+    const colMasks = boardInfo[3];
+    const boxMasks = boardInfo[4];
+    this.solverBoard = new Uint8Array(board);
+    this.pencilMarks = new Int32Array(pencilMarks);
     this.rowMasks = new Int32Array(rowMasks);
     this.colMasks = new Int32Array(colMasks);
     this.boxMasks = new Int32Array(boxMasks);
   }
 
   /**
-   * Initialize the masks used to check for isValidMove
+   * Initialize the masks used to check for isValidMove.
    */
   private initializeMasks() {
-    for (let i = 0; i < 81; i++) {
-      const num = this.board[i]!;
+    this.rowMasks = new Int32Array(9).fill(0);
+    this.colMasks = new Int32Array(9).fill(0);
+    this.boxMasks = new Int32Array(9).fill(0);
+
+    for (let i = 0; i < this.solverBoard.length; i++) {
+      const num = this.solverBoard[i]!;
       if (num != 0) {
         const row = Math.trunc(i / 9);
         const col = i % 9;
@@ -117,22 +113,45 @@ export class Sudoku {
   }
 
   /**
+   * Initialize the pencil marks.
+   */
+  private initializePencilMarks() {
+    this.pencilMarks = new Int32Array(81).fill(0);
+
+    for (let i = 0; i < this.solverBoard.length; i++) {
+      if (this.solverBoard[i] === 0) {
+        const row = Math.trunc(i / 9);
+        const col = i % 9;
+        const box = this.getBoxIndex(row, col);
+
+        const taken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
+        // make sure only the relevant 9 bits can be active
+        this.pencilMarks[i] = ~taken & 0b1111111110;
+      }
+    }
+  }
+
+  /**
    * Add number to board and update cache.
    *
    * @param idx - index where num will be placed.
    * @param num - number that will be placed.
    */
-  private placeNumber(idx: number, num: number) {
+  private placeNumber(idx: number, num: number, updatePencilMarks: boolean = false) {
     const row = Math.trunc(idx / 9);
     const col = idx % 9;
     const box = this.getBoxIndex(row, col);
 
-    this.board[idx] = num;
+    this.solverBoard[idx] = num;
 
     const bit = 1 << num;
     this.rowMasks[row]! |= bit;
     this.colMasks[col]! |= bit;
     this.boxMasks[box]! |= bit;
+    if (updatePencilMarks) {
+      this.pencilMarks[idx] = 0;
+      this.updateNeighborPencilMarks(row, col, box, bit, false);
+    }
   }
 
   /**
@@ -141,17 +160,64 @@ export class Sudoku {
    * @param idx - index where num will be removed.
    * @param num - number that will be removed.
    */
-  private removeNumber(idx: number, num: number) {
+  private removeNumber(idx: number, num: number, updatePencilMarks: boolean = false) {
     const row = Math.trunc(idx / 9);
     const col = idx % 9;
     const box = this.getBoxIndex(row, col);
 
-    this.board[idx] = 0;
+    this.solverBoard[idx] = 0;
 
     const bit = 1 << num;
-    this.rowMasks[row]! ^= bit;
-    this.colMasks[col]! ^= bit;
-    this.boxMasks[box]! ^= bit;
+    this.rowMasks[row]! &= ~bit;
+    this.colMasks[col]! &= ~bit;
+    this.boxMasks[box]! &= ~bit;
+    if (updatePencilMarks) {
+      const taken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
+      // make sure only the relevant 9 bits can be active
+      this.pencilMarks[idx] = ~taken & 0b1111111110;
+      this.updateNeighborPencilMarks(row, col, box, bit, true);
+    }
+  }
+
+  private updateNeighborPencilMarks(
+    row: number,
+    col: number,
+    box: number,
+    bit: number,
+    add: boolean,
+  ) {
+    const startRow = Math.trunc(box / 3) * 3;
+    const startCol = (box % 3) * 3;
+
+    for (let i = 0; i < 9; i++) {
+      const rowIdx = row * 9 + i;
+      const colIdx = i * 9 + col;
+      const boxRow = startRow + Math.trunc(i / 3);
+      const boxCol = startCol + (i % 3);
+      const boxIdx = boxRow * 9 + boxCol;
+
+      this.updateCellPencilMarks(rowIdx, row, col, box, bit, add);
+      this.updateCellPencilMarks(colIdx, row, col, box, bit, add);
+      this.updateCellPencilMarks(boxIdx, row, col, box, bit, add);
+    }
+  }
+
+  private updateCellPencilMarks(
+    idx: number,
+    row: number,
+    col: number,
+    box: number,
+    bit: number,
+    add: boolean,
+  ) {
+    if (this.solverBoard[idx] !== 0) return;
+
+    if (add) {
+      const taken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
+      if ((taken & bit) === 0) this.pencilMarks[idx]! |= bit;
+    } else {
+      this.pencilMarks[idx]! &= ~bit;
+    }
   }
 
   /**
@@ -171,9 +237,9 @@ export class Sudoku {
    * @param boardState - The sudoku to be solved.
    * @returns The solved board state or null if there is none.
    */
-  public solve() {
+  public solve(): Uint8Array | null {
     const solveInner = (): boolean => {
-      const idx = this.board.indexOf(0);
+      const idx = this.solverBoard.indexOf(0);
       if (idx == -1) return true;
 
       for (const num of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
@@ -186,7 +252,10 @@ export class Sudoku {
       return false;
     };
 
-    solveInner();
+    this.solverBoard = new Uint8Array(this.userBoard);
+    this.initializeMasks();
+
+    return solveInner() ? this.solverBoard : null;
   }
 
   /**
@@ -197,7 +266,7 @@ export class Sudoku {
    */
   private singleSolution(): boolean {
     const singleSolutionInner = (acc: number): number => {
-      const idx = this.board.indexOf(0);
+      const idx = this.solverBoard.indexOf(0);
       if (idx == -1) return acc + 1;
 
       for (let num = 1; num <= 9; num++) {
@@ -273,7 +342,7 @@ export class Sudoku {
    * @returns true if the boardState is solved, false otherwise.
    */
   private solved() {
-    return !this.board.includes(0);
+    return !this.solverBoard.includes(0);
   }
 
   /**
@@ -284,15 +353,20 @@ export class Sudoku {
    *          that can be inserted.
    */
   private findNakedSingle(): [StepType, number, number] {
-    for (let idx = 0; idx < this.board.length; idx++) {
-      if (this.board[idx] != 0) {
+    for (let idx = 0; idx < this.solverBoard.length; idx++) {
+      if (this.solverBoard[idx] !== 0) {
         continue;
       }
 
-      const candidates = this.getCandidates(idx);
-
-      if (candidates.length == 1) {
-        return [StepType.NAKEDSINGLE, idx, candidates[0]!];
+      const marks = this.pencilMarks[idx]!;
+      // (n & (n - 1)) === 0 means that it only has 1 active bit
+      // 8: 1000
+      // 8 - 1: 0111
+      // n & (n - 1) -> 1000 & 0111 = 0
+      if (marks > 0 && (marks & (marks - 1)) === 0) {
+        // 31 - Math.clz32(num) gets the position of the active bit
+        // 8: 1000 -> 3
+        return [StepType.NAKEDSINGLE, idx, 31 - Math.clz32(marks)];
       }
     }
 
@@ -326,7 +400,7 @@ export class Sudoku {
       for (let i = 0; i < 9; i++) {
         // 1. Check Row
         const rowIdx = row * 9 + i;
-        if (this.board[rowIdx] === 0) {
+        if (this.solverBoard[rowIdx] === 0) {
           const candidates = this.getCandidates(rowIdx);
           for (const num of candidates) {
             rowCounts[num]++;
@@ -336,7 +410,7 @@ export class Sudoku {
 
         // 2. Check Column
         const colIdx = i * 9 + col;
-        if (this.board[colIdx] === 0) {
+        if (this.solverBoard[colIdx] === 0) {
           const candidates = this.getCandidates(colIdx);
           for (const num of candidates) {
             colCounts[num]++;
@@ -348,7 +422,7 @@ export class Sudoku {
         const boxRow = startRow + Math.trunc(i / 3);
         const boxCol = startCol + (i % 3);
         const boxIdx = boxRow * 9 + boxCol;
-        if (this.board[boxIdx] === 0) {
+        if (this.solverBoard[boxIdx] === 0) {
           const candidates = this.getCandidates(boxIdx);
           for (const num of candidates) {
             boxCounts[num]++;
@@ -382,10 +456,13 @@ export class Sudoku {
    * Find a sequence of moves based on logic (naked singles/doubles, hidden singles, etc.) that solves a puzzle.
    *
    * @param boardState - The boardState to solve.
-   * @returns Sequence of moves that solves the puzzle.
+   * @returns Sequence of moves that solves the puzzle, null if none exists.
    */
-  public logicSolve() {
-    const boardInfo = this.copyBoard();
+  public logicSolve(): [StepType, number, number][] | null {
+    this.solverBoard = new Uint8Array(this.userBoard);
+    this.initializeMasks();
+    this.initializePencilMarks();
+
     // (step type, index, candidate)
     const solution: [StepType, number, number][] = [];
     while (!this.solved()) {
@@ -394,7 +471,7 @@ export class Sudoku {
       let step = this.findNakedSingle();
       if (step[1] != -1) {
         solution.push(step);
-        this.placeNumber(step[1], step[2]);
+        this.placeNumber(step[1], step[2], true);
         continue;
       }
 
@@ -402,7 +479,7 @@ export class Sudoku {
       step = this.findHiddenSingle();
       if (step[1] != -1) {
         solution.push(step);
-        this.placeNumber(step[1], step[2]);
+        this.placeNumber(step[1], step[2], true);
         continue;
       }
 
@@ -411,7 +488,7 @@ export class Sudoku {
       step = this.findNakedPair();
       if (step[1] != -1) {
         solution.push(step);
-        this.placeNumber(step[1], step[2]);
+        this.placeNumber(step[1], step[2], true);
         continue;
       }
 
@@ -438,20 +515,19 @@ export class Sudoku {
       // - jellyfish
       // - unique rectangles (might not)
 
-      throw 'NO SOLUTION';
+      return null;
     }
 
     console.log();
-    console.log(this.toString());
+    console.log(this.toString(this.solverBoard));
     console.log();
-    this.resetBoard(boardInfo);
 
     return solution;
   }
 
   toString(boardState?: Uint8Array): string {
     if (boardState === undefined) {
-      boardState = this.board;
+      boardState = this.userBoard;
     }
 
     let str = '';
