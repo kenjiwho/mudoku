@@ -3,7 +3,7 @@ import { Solver } from './solver';
 
 export class Board {
   public board: Uint8Array;
-  public readonly startBoard: Uint8Array;
+  public initialClues: boolean[];
 
   private generator = new Generator();
   private solver = new Solver();
@@ -17,14 +17,51 @@ export class Board {
       this.board = this.generator.generate();
     }
 
-    this.startBoard = new Uint8Array(this.board);
+    this.initialClues = Array.from(this.board).map(
+      (val: number, _idx: number, _arr: number[]) => val > 0,
+    );
     this.board = new Uint8Array(this.board);
   }
 
+  /**
+   * Place a number on the board.
+   *
+   * @param idx - The index where to place the number.
+   * @param num - The number to place
+   * @returns true if success, false otherwise.
+   */
+  public placeNumber(idx: number, num: number) {
+    if (this.initialClues[idx]) {
+      return false;
+    }
+    this.board[idx] = num;
+    return true;
+  }
+
+  /**
+   * Remove a number on the board.
+   *
+   * @param idx - The index where to remove a number.
+   * @returns true if success, false otherwise.
+   */
+  public removeNumber(idx: number) {
+    if (this.initialClues[idx]) {
+      return false;
+    }
+    this.board[idx] = 0;
+    return true;
+  }
+
+  /**
+   * Solve sudoku with the solver using backtracking.
+   */
   public solve() {
     return this.solver.solve(this.board);
   }
 
+  /**
+   * Solve sudoku with the solver using logic and inference.
+   */
   public logicSolve() {
     return this.solver.logicSolve(this.board);
   }
