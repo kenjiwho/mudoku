@@ -8,7 +8,7 @@ export class Generator {
   private colMasks: Int32Array = new Int32Array(9).fill(0);
   private boxMasks: Int32Array = new Int32Array(9).fill(0);
 
-  public generate(): Uint8Array {
+  public generate(): number[] {
     this.board = new Uint8Array(81).fill(0);
     // generate random sudoku puzzle
     const generateInner = (): boolean => {
@@ -36,7 +36,7 @@ export class Generator {
       }
     }
 
-    return this.board;
+    return Array.from(this.board);
   }
 
   /**

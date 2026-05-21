@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Board } from '@/sudoku/board';
+import { Generator } from '@/sudoku/generator';
 import { onMounted, onUnmounted, ref } from 'vue';
 
-const sudoku = new Board();
-const board = ref(Array.from(sudoku.board));
+const boardGenerator = new Generator();
+const board = ref(boardGenerator.generate());
+const sudoku = new Board(board.value);
 let selectedCell = ref(-1);
 
 // Helper to determine if a cell sits on a thick 3x3 boundary line
@@ -30,12 +32,12 @@ function getCellClasses(index: number) {
 
 function placeNumber(num: number) {
   const idx = selectedCell.value;
-  if (sudoku.placeNumber(idx, num)) board.value[idx] = num;
+  sudoku.placeNumber(idx, num);
 }
 
 function removeNumber() {
   const idx = selectedCell.value;
-  if (sudoku.removeNumber(idx)) board.value[idx] = 0;
+  sudoku.removeNumber(idx);
 }
 
 function onClick(idx: number) {
@@ -67,12 +69,9 @@ function onInput(event: KeyboardEvent) {
     case 'Backspace':
     case 'Delete':
     case 'Digit0':
-      // remove selection with 0, Backspace, Del
-      removeNumber();
-      break;
     case 'Escape':
-      // deselect
-      selectedCell.value = -1;
+      // cell deletion
+      removeNumber();
       break;
     // move selection with arrows
     case 'ArrowUp':

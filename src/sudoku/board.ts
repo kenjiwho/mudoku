@@ -1,8 +1,8 @@
 import { Generator } from './generator';
-import { Solver } from './solver';
+import { Solver, StepType } from './solver';
 
 export class Board {
-  public board: Uint8Array;
+  public board: number[];
   public initialClues: boolean[];
 
   private generator = new Generator();
@@ -10,9 +10,9 @@ export class Board {
 
   public pencilMarks: Int32Array = new Int32Array(81).fill(0);
 
-  constructor(board?: Uint8Array) {
+  constructor(board?: number[]) {
     if (board !== undefined) {
-      this.board = new Uint8Array(board);
+      this.board = board;
     } else {
       this.board = this.generator.generate();
     }
@@ -20,7 +20,6 @@ export class Board {
     this.initialClues = Array.from(this.board).map(
       (val: number, _idx: number, _arr: number[]) => val > 0,
     );
-    this.board = new Uint8Array(this.board);
   }
 
   /**
@@ -55,18 +54,18 @@ export class Board {
   /**
    * Solve sudoku with the solver using backtracking.
    */
-  public solve() {
+  public solve(): number[] | null {
     return this.solver.solve(this.board);
   }
 
   /**
    * Solve sudoku with the solver using logic and inference.
    */
-  public logicSolve() {
+  public logicSolve(): [StepType, number, number][] | null {
     return this.solver.logicSolve(this.board);
   }
 
-  toString(boardState?: Uint8Array): string {
+  toString(boardState?: number[]): string {
     if (boardState === undefined) {
       boardState = this.board;
     }
