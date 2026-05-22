@@ -46,3 +46,5 @@ firebase-debug.*.log
 ui-debug.log
 
 .runtimeconfig.json
+
+src/assets/sudoku.wasm

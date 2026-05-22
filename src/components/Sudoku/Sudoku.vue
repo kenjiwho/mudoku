@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { Board } from '@/sudoku/board';
 import { Generator } from '@/sudoku/generator';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import BoardGrid from './Board.vue';
 import { InputType } from './types';
+import { getEngine, initSudokuEngine } from '@/sudoku/test';
+
+const isLoaded = ref(false);
+
+onMounted(async () => {
+  await initSudokuEngine();
+  isLoaded.value = true;
+});
 
 const boardGenerator = new Generator();
 const board = ref(boardGenerator.generate());
@@ -15,6 +23,8 @@ function cellClick(idx: number) {
 }
 
 function onInput(input: InputType, payload: number) {
+  const engine = getEngine();
+  console.log(engine.add(5, 7));
   switch (input) {
     case InputType.PLACE:
       // cell insertion
