@@ -1,6 +1,7 @@
 import initWasm from '../assets/sudoku.wasm?init';
+import { randomU64 } from './helper';
 
-export interface SudokuApi {
+interface SudokuApi {
   memory: WebAssembly.Memory;
   getBoardPointer(): number;
   generate(seed: bigint): void;
@@ -8,26 +9,33 @@ export interface SudokuApi {
 
 let sudokuEngine: SudokuApi | null = null;
 
-export async function initSudokuEngine(): Promise<SudokuApi> {
-  if (sudokuEngine) return sudokuEngine;
+export async function initSudokuEngine() {
+  if (sudokuEngine) return;
 
   try {
     const wasmModule = await initWasm();
     sudokuEngine = wasmModule.exports as unknown as SudokuApi;
 
     console.log('Sudoku engine loaded.');
-    return sudokuEngine;
   } catch (error) {
     console.error('Failed to load WebAssembly Sudoku engine:', error);
     throw error;
   }
 }
 
-export function getBoard(): number[] {
+function getBoard(): number[] {
   if (!sudokuEngine) throw new Error('Sudoku engine has not been initialized yet!');
 
   const pointer = sudokuEngine.getBoardPointer();
   const memoryView = new Uint8Array(sudokuEngine.memory.buffer, pointer, 81);
 
   return Array.from(memoryView);
+}
+
+export function generate(): number[] {
+  if (!sudokuEngine) throw new Error('Sudoku engine has not been initialized yet!');
+
+  sudokuEngine.generate(randomU64());
+
+  return getBoard();
 }

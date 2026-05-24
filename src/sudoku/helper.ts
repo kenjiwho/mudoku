@@ -32,3 +32,12 @@ export function locActiveBit(bit: number): number {
   // 8: 1000 -> 3
   return 31 - Math.clz32(bit);
 }
+
+/**
+ * Generate and return a random U64 integer.
+ */
+export function randomU64(): bigint {
+  const arr = new BigUint64Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0]!;
+}

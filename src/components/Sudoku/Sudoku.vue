@@ -3,9 +3,8 @@ import { Board } from '@/sudoku/board';
 import { onMounted, ref } from 'vue';
 import BoardGrid from './Board.vue';
 import { InputType } from './types';
-import { getBoard, initSudokuEngine, type SudokuApi } from '@/sudoku/engine';
+import { generate, initSudokuEngine } from '@/sudoku/engine';
 
-let engine: SudokuApi;
 const isLoaded = ref(false);
 
 const board = ref([0]);
@@ -13,21 +12,14 @@ let sudoku: Board;
 const selectedCell = ref(-1);
 
 onMounted(async () => {
-  engine = await initSudokuEngine();
-  engine.generate(getRandomU64());
-  board.value = getBoard();
+  await initSudokuEngine();
+  board.value = generate();
   sudoku = new Board(board.value);
   isLoaded.value = true;
 });
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
-}
-
-function getRandomU64(): bigint {
-  const arr = new BigUint64Array(1);
-  crypto.getRandomValues(arr);
-  return arr[0]!;
 }
 
 function onInput(input: InputType, payload: number) {
