@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build:wasm": "cd native && zig build -Doptimize=ReleaseSmall --prefix ../src/assets",
+    "dev": "bun run build:wasm && vite",
+    "build": "bun run build:wasm && run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",

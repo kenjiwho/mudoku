@@ -1,4 +1,4 @@
-import initWasm from '../assets/sudoku.wasm?init';
+import initWasm from '../assets/bin/sudoku.wasm?init';
 import { randomU64 } from './helper';
 
 interface SudokuApi {

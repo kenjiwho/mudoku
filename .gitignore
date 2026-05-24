@@ -47,4 +47,4 @@ ui-debug.log
 
 .runtimeconfig.json
 
-src/assets/sudoku.wasm
+src/assets/bin/sudoku.wasm
