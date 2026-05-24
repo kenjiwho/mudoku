@@ -8,15 +8,16 @@ import { getBoardView, initSudokuEngine, type SudokuApi } from '@/sudoku/engine'
 let engine: SudokuApi;
 const isLoaded = ref(false);
 
-const board = ref([0]);
+let board: Uint8Array;
 let sudoku: Board;
 const selectedCell = ref(-1);
+const renderTrigger = ref(0);
 
 onMounted(async () => {
   engine = await initSudokuEngine();
   engine.generate(getRandomU64());
-  board.value = Array.from(getBoardView());
-  sudoku = new Board(board.value);
+  board = getBoardView();
+  sudoku = new Board(board);
   isLoaded.value = true;
 });
 
@@ -59,12 +60,12 @@ function onInput(input: InputType, payload: number) {
 
 function placeNumber(num: number) {
   const idx = selectedCell.value;
-  sudoku.placeNumber(idx, num);
+  if (sudoku.placeNumber(idx, num)) renderTrigger.value++;
 }
 
 function removeNumber() {
   const idx = selectedCell.value;
-  sudoku.removeNumber(idx);
+  if (sudoku.removeNumber(idx)) renderTrigger.value++;
 }
 </script>
 
@@ -75,6 +76,7 @@ function removeNumber() {
   </div>
   <div v-else>
     <BoardGrid
+      :key="renderTrigger"
       :board
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"

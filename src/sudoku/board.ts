@@ -1,14 +1,14 @@
 import { Solver, StepType } from './solver';
 
 export class Board {
-  public board: number[];
+  public board: Uint8Array;
   public initialClues: boolean[];
 
   private solver = new Solver();
 
   public pencilMarks: Int32Array = new Int32Array(81).fill(0);
 
-  constructor(board: number[]) {
+  constructor(board: Uint8Array) {
     this.board = board;
 
     this.initialClues = Array.from(this.board).map(
@@ -59,7 +59,7 @@ export class Board {
     return this.solver.logicSolve(this.board);
   }
 
-  toString(boardState?: number[]): string {
+  toString(boardState?: Uint8Array): string {
     if (boardState === undefined) {
       boardState = this.board;
     }

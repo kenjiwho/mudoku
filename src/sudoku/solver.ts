@@ -23,7 +23,7 @@ export class Solver {
    * @param board - The board to solve.
    * @returns The solved board state or null if there is none.
    */
-  public solve(board: number[]): number[] | null {
+  public solve(board: Uint8Array): number[] | null {
     const solveInner = (): boolean => {
       const idx = this.board.indexOf(0);
       if (idx == -1) return true;
@@ -50,7 +50,7 @@ export class Solver {
    * @param boardState - The boardState to solve.
    * @returns Sequence of moves that solves the puzzle, null if none exists.
    */
-  public logicSolve(board: number[]): [StepType, number, number][] | null {
+  public logicSolve(board: Uint8Array): [StepType, number, number][] | null {
     this.board = new Uint8Array(board);
     this.initializeMasks();
     this.initializePencilMarks();
