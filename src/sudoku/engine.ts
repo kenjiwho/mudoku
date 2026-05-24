@@ -6,26 +6,28 @@ export interface SudokuApi {
   generate(seed: bigint): void;
 }
 
-let wasmEngine: SudokuApi | null = null;
+let sudokuEngine: SudokuApi | null = null;
 
 export async function initSudokuEngine(): Promise<SudokuApi> {
-  if (wasmEngine) return wasmEngine;
+  if (sudokuEngine) return sudokuEngine;
 
   try {
     const wasmModule = await initWasm();
-    wasmEngine = wasmModule.exports as unknown as SudokuApi;
+    sudokuEngine = wasmModule.exports as unknown as SudokuApi;
 
     console.log('Sudoku engine loaded.');
-    return wasmEngine;
+    return sudokuEngine;
   } catch (error) {
     console.error('Failed to load WebAssembly Sudoku engine:', error);
     throw error;
   }
 }
 
-export function getBoardView(): Uint8Array {
-  if (!wasmEngine) throw new Error('Sudoku engine has not been initialized yet!');
+export function getBoard(): number[] {
+  if (!sudokuEngine) throw new Error('Sudoku engine has not been initialized yet!');
 
-  const pointer = wasmEngine.getBoardPointer();
-  return new Uint8Array(wasmEngine.memory.buffer, pointer, 81);
+  const pointer = sudokuEngine.getBoardPointer();
+  const memoryView = new Uint8Array(sudokuEngine.memory.buffer, pointer, 81);
+
+  return Array.from(memoryView);
 }

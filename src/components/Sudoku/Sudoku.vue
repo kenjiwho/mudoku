@@ -3,21 +3,20 @@ import { Board } from '@/sudoku/board';
 import { onMounted, ref } from 'vue';
 import BoardGrid from './Board.vue';
 import { InputType } from './types';
-import { getBoardView, initSudokuEngine, type SudokuApi } from '@/sudoku/engine';
+import { getBoard, initSudokuEngine, type SudokuApi } from '@/sudoku/engine';
 
 let engine: SudokuApi;
 const isLoaded = ref(false);
 
-let board: Uint8Array;
+const board = ref([0]);
 let sudoku: Board;
 const selectedCell = ref(-1);
-const renderTrigger = ref(0);
 
 onMounted(async () => {
   engine = await initSudokuEngine();
   engine.generate(getRandomU64());
-  board = getBoardView();
-  sudoku = new Board(board);
+  board.value = getBoard();
+  sudoku = new Board(board.value);
   isLoaded.value = true;
 });
 
@@ -60,12 +59,12 @@ function onInput(input: InputType, payload: number) {
 
 function placeNumber(num: number) {
   const idx = selectedCell.value;
-  if (sudoku.placeNumber(idx, num)) renderTrigger.value++;
+  sudoku.placeNumber(idx, num);
 }
 
 function removeNumber() {
   const idx = selectedCell.value;
-  if (sudoku.removeNumber(idx)) renderTrigger.value++;
+  sudoku.removeNumber(idx);
 }
 </script>
 
@@ -76,7 +75,6 @@ function removeNumber() {
   </div>
   <div v-else>
     <BoardGrid
-      :key="renderTrigger"
       :board
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"

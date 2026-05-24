@@ -3,7 +3,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { InputType } from './types';
 
 const props = defineProps<{
-  board: Uint8Array;
+  board: number[];
   selectedCell: number;
   initialClues: boolean[];
 }>();
