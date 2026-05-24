@@ -1,30 +1,36 @@
 <script setup lang="ts">
 import { Board } from '@/sudoku/board';
-import { Generator } from '@/sudoku/generator';
 import { onMounted, ref } from 'vue';
 import BoardGrid from './Board.vue';
 import { InputType } from './types';
-import { getEngine, initSudokuEngine } from '@/sudoku/test';
+import { getBoardView, initSudokuEngine, type SudokuApi } from '@/sudoku/engine';
 
+let engine: SudokuApi;
 const isLoaded = ref(false);
 
+const board = ref([0]);
+let sudoku: Board;
+const selectedCell = ref(-1);
+
 onMounted(async () => {
-  await initSudokuEngine();
+  engine = await initSudokuEngine();
+  engine.generate(getRandomU64());
+  board.value = Array.from(getBoardView());
+  sudoku = new Board(board.value);
   isLoaded.value = true;
 });
-
-const boardGenerator = new Generator();
-const board = ref(boardGenerator.generate());
-const sudoku = new Board(board.value);
-const selectedCell = ref(-1);
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
 }
 
+function getRandomU64(): bigint {
+  const arr = new BigUint64Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0]!;
+}
+
 function onInput(input: InputType, payload: number) {
-  const engine = getEngine();
-  console.log(engine.add(5, 7));
   switch (input) {
     case InputType.PLACE:
       // cell insertion
@@ -63,13 +69,19 @@ function removeNumber() {
 </script>
 
 <template>
-  <BoardGrid
-    :board
-    :selected-cell="selectedCell"
-    :initial-clues="sudoku.initialClues"
-    @cell-click="cellClick"
-    @on-input="onInput"
-  />
+  <div v-if="!isLoaded" class="flex items-center justify-center p-8 text-slate-400">
+    <div class="animate-spin mr-2">⏳</div>
+    Loading...
+  </div>
+  <div v-else>
+    <BoardGrid
+      :board
+      :selected-cell="selectedCell"
+      :initial-clues="sudoku.initialClues"
+      @cell-click="cellClick"
+      @on-input="onInput"
+    />
+  </div>
 </template>
 
 <style></style>

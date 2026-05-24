@@ -18,5 +18,13 @@ pub fn build(b: *std.Build) void {
     exe.entry = .disabled;
     exe.rdynamic = true;
 
+    const exe_check = b.addExecutable(.{
+        .name = "GB_emulator",
+        .root_module = mod,
+    });
+
+    const check = b.step("check", "Check if foo compiles");
+    check.dependOn(&exe_check.step);
+
     b.installArtifact(exe);
 }

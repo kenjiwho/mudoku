@@ -1,21 +1,15 @@
-import { Generator } from './generator';
 import { Solver, StepType } from './solver';
 
 export class Board {
   public board: number[];
   public initialClues: boolean[];
 
-  private generator = new Generator();
   private solver = new Solver();
 
   public pencilMarks: Int32Array = new Int32Array(81).fill(0);
 
-  constructor(board?: number[]) {
-    if (board !== undefined) {
-      this.board = board;
-    } else {
-      this.board = this.generator.generate();
-    }
+  constructor(board: number[]) {
+    this.board = board;
 
     this.initialClues = Array.from(this.board).map(
       (val: number, _idx: number, _arr: number[]) => val > 0,
