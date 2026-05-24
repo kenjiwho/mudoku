@@ -4,12 +4,14 @@ import { onMounted, ref } from 'vue';
 import BoardGrid from './Board.vue';
 import { InputType } from './types';
 import { generate, initSudokuEngine } from '@/sudoku/engine';
+import Buttons from './Buttons.vue';
 
 const isLoaded = ref(false);
 
 const board = ref([0]);
 let sudoku: Board;
 const selectedCell = ref(-1);
+const pencil = ref(false);
 
 onMounted(async () => {
   await initSudokuEngine();
@@ -20,6 +22,10 @@ onMounted(async () => {
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
+}
+
+function pencilClick() {
+  pencil.value = !pencil.value;
 }
 
 function onInput(input: InputType, payload: number) {
@@ -73,6 +79,7 @@ function removeNumber() {
       @cell-click="cellClick"
       @on-input="onInput"
     />
+    <Buttons :pencil @pencil-click="pencilClick" @on-input="onInput" />
   </div>
 </template>
 

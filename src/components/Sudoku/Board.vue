@@ -87,9 +87,7 @@ function getCellClasses(index: number) {
     // Highlight if selected
     'ring-4 ring-inset ring-blue-500 dark:ring-blue-600 z-10': props.selectedCell === index,
     // Visual styling for locked initial clues vs user inputs
-    'font-bold text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800':
-      props.initialClues[index],
-    // 'text-blue-600 font-medium': !initialClues[index] && board[index] !== 0,
+    'text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800': props.initialClues[index],
   };
 }
 
@@ -107,7 +105,7 @@ onUnmounted(() => window.removeEventListener('keydown', onInput));
         :key="idx"
         :class="getCellClasses(idx)"
         @click="emit('cell-click', idx)"
-        class="flex justify-center items-center cursor-pointer select-none text-xl sm:text-2xl transition-colors duration-150 aspect-square"
+        class="flex justify-center items-center cursor-pointer font-bold select-none text-xl sm:text-2xl transition-colors duration-150 aspect-square"
       >
         <span v-if="val !== 0">{{ val }}</span>
       </div>
