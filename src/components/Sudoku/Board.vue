@@ -4,6 +4,7 @@ import { InputType } from './types';
 
 const props = defineProps<{
   board: number[];
+  mistakes: Set<number>;
   selectedCell: number;
   initialClues: boolean[];
 }>();
@@ -72,9 +73,9 @@ function onInput(event: KeyboardEvent) {
 }
 
 // Helper to determine if a cell sits on a thick 3x3 boundary line
-function getCellClasses(index: number) {
-  const row = Math.trunc(index / 9);
-  const col = index % 9;
+function getCellClasses(idx: number) {
+  const row = Math.trunc(idx / 9);
+  const col = idx % 9;
 
   return {
     // Standard Tailwind borders for every cell
@@ -85,9 +86,11 @@ function getCellClasses(index: number) {
     'border-t-slate-900 dark:border-t-slate-500': row === 3 || row === 6,
     'border-l-slate-900 dark:border-l-slate-500': col === 3 || col === 6,
     // Highlight if selected
-    'ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10': props.selectedCell === index,
+    'ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10': props.selectedCell === idx,
     // Visual styling for locked initial clues vs user inputs
-    'text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800': props.initialClues[index],
+    'text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800': props.initialClues[idx],
+    // red background for mistakes
+    'bg-red-500! dark:bg-red-900!': props.mistakes.has(idx),
   };
 }
 
@@ -98,7 +101,7 @@ onUnmounted(() => window.removeEventListener('keydown', onInput));
 <template>
   <div class="flex justify-center items-center p-4">
     <div
-      class="grid grid-cols-9 grid-rows-9 border-2 bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-500 dark:text-gray-100 shadow-xl w-full max-w-[500px]"
+      class="grid grid-cols-9 grid-rows-9 border-2 border-slate-900 dark:border-slate-500 dark:text-gray-100 shadow-xl w-full max-w-[500px]"
     >
       <div
         v-for="(val, idx) in board"

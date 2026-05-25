@@ -9,6 +9,7 @@ import Buttons from './Buttons.vue';
 const isLoaded = ref(false);
 
 const board = ref([0]);
+const mistakes = ref(new Set<number>());
 let sudoku: Board;
 const selectedCell = ref(-1);
 const pencil = ref(false);
@@ -17,11 +18,13 @@ onMounted(async () => {
   await initSudokuEngine();
   board.value = generate();
   sudoku = new Board(board.value);
+  mistakes.value = sudoku.mistakes;
   isLoaded.value = true;
 });
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
+  console.log(mistakes.value);
 }
 
 function pencilClick() {
@@ -74,6 +77,7 @@ function removeNumber() {
   <div v-else>
     <BoardGrid
       :board
+      :mistakes
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"
       @cell-click="cellClick"

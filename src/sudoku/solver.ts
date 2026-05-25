@@ -1,4 +1,4 @@
-import { locActiveBit, shuffle } from './helper';
+import { getBoxIndex, locActiveBit, shuffle } from './helper';
 
 export enum StepType {
   NAKEDSINGLE,
@@ -155,7 +155,7 @@ export class Solver {
       if (num != 0) {
         const row = Math.trunc(i / 9);
         const col = i % 9;
-        const box = this.getBoxIndex(row, col);
+        const box = getBoxIndex(row, col);
 
         const bit = 1 << num;
         this.rowMasks[row]! |= bit;
@@ -175,7 +175,7 @@ export class Solver {
       if (this.board[i] === 0) {
         const row = Math.trunc(i / 9);
         const col = i % 9;
-        const box = this.getBoxIndex(row, col);
+        const box = getBoxIndex(row, col);
 
         const taken = this.rowMasks[row]! | this.colMasks[col]! | this.boxMasks[box]!;
         // make sure only the relevant 9 bits can be active
@@ -193,7 +193,7 @@ export class Solver {
   private placeNumber(idx: number, num: number, updatePencilMarks: boolean = false) {
     const row = Math.trunc(idx / 9);
     const col = idx % 9;
-    const box = this.getBoxIndex(row, col);
+    const box = getBoxIndex(row, col);
 
     this.board[idx] = num;
 
@@ -216,7 +216,7 @@ export class Solver {
   private removeNumber(idx: number, num: number, updatePencilMarks: boolean = false) {
     const row = Math.trunc(idx / 9);
     const col = idx % 9;
-    const box = this.getBoxIndex(row, col);
+    const box = getBoxIndex(row, col);
 
     this.board[idx] = 0;
 
@@ -274,17 +274,6 @@ export class Solver {
   }
 
   /**
-   * Calculate which box a cell belongs to.
-   *
-   * @param row - Row of cell.
-   * @param col - Col of cell.
-   * @returns The box index the cell belongs to.
-   */
-  private getBoxIndex(row: number, col: number): number {
-    return Math.trunc(row / 3) * 3 + Math.trunc(col / 3);
-  }
-
-  /**
    * Checks if a board is valid from the perspective of cell idx.
    *
    * @param idx - The index of the cell that will be validated.
@@ -294,7 +283,7 @@ export class Solver {
   private isValidMove(idx: number, num: number): boolean {
     const row = Math.trunc(idx / 9);
     const col = idx % 9;
-    const box = this.getBoxIndex(row, col);
+    const box = getBoxIndex(row, col);
 
     const bit = 1 << num;
 

@@ -41,3 +41,26 @@ export function randomU64(): bigint {
   crypto.getRandomValues(arr);
   return arr[0]!;
 }
+
+/**
+ * Calculate which box a cell belongs to.
+ *
+ * @param row - Row of cell.
+ * @param col - Col of cell.
+ * @returns The box index the cell belongs to.
+ */
+export function getBoxIndex(row: number, col: number): number {
+  return Math.trunc(row / 3) * 3 + Math.trunc(col / 3);
+}
+
+/**
+ * Inplace union of two sets into the first set.
+ *
+ * @param setA - First set (will be used to store the result).
+ * @param setB - Second set.
+ */
+export function unionInplace<T>(setA: Set<T>, setB: Set<T>) {
+  for (const item of setB) {
+    setA.add(item);
+  }
+}
