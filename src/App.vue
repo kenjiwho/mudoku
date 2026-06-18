@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import Sudoku from './components/Sudoku/Sudoku.vue';
+import { onMounted } from "vue";
+import Sudoku from "./components/Sudoku/Sudoku.vue";
 
-const theme = localStorage.getItem('theme') || 'system';
+const theme = localStorage.getItem("theme") || "system";
 
 function applyTheme(theme: string) {
   const isDark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', isDark);
+    theme === "dark" ||
+    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.classList.toggle("dark", isDark);
 }
 
 function setTheme(t: string) {
-  localStorage.setItem('theme', t);
+  localStorage.setItem("theme", t);
   applyTheme(t);
 }
 
@@ -32,6 +32,9 @@ onMounted(() => applyTheme(theme));
         <option value="dark">Dark</option>
       </select>
     </div>
-    <Sudoku />
+
+    <main class="flex-1 flex flex-col items-center justify-center p-4">
+      <router-view />
+    </main>
   </div>
 </template>

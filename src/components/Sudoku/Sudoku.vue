@@ -80,7 +80,7 @@ function removeNumber() {
     <div class="animate-spin mr-2">⏳</div>
     Loading...
   </div>
-  <div v-else>
+  <div v-else class="w-full items-center">
     <BoardGrid
       :key="renderTrigger"
       :board
