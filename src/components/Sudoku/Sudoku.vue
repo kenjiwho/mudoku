@@ -29,10 +29,6 @@ function cellClick(idx: number) {
   selectedCell.value = idx;
 }
 
-function pencilClick() {
-  pencil.value = !pencil.value;
-}
-
 function onInput(input: InputType, payload: any) {
   switch (input) {
     case InputType.PLACE:
@@ -95,7 +91,7 @@ function removeNumber() {
       @cell-click="cellClick"
       @on-input="onInput"
     />
-    <Buttons :pencil @pencil-click="pencilClick" @on-input="onInput" />
+    <Buttons :pencil @on-input="onInput" />
   </div>
 </template>
 
