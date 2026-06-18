@@ -23,10 +23,6 @@ export function popcount(n: number): number {
   return count;
 }
 
-export function dec2bin(dec: number): string {
-  return (dec >>> 0).toString(2);
-}
-
 export function locActiveBit(bit: number): number {
   // 31 - Math.clz32(bit) gets the position of the active bit
   // 8: 1000 -> 3

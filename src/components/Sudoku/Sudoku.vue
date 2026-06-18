@@ -10,6 +10,7 @@ const isLoaded = ref(false);
 
 const board = ref([0]);
 const mistakes = ref(new Set<number>());
+const pencilMarks = ref([0]);
 let sudoku: Board;
 const selectedCell = ref(-1);
 const pencil = ref(false);
@@ -19,12 +20,12 @@ onMounted(async () => {
   board.value = generate();
   sudoku = new Board(board.value);
   mistakes.value = sudoku.mistakes;
+  pencilMarks.value = sudoku.pencilMarks;
   isLoaded.value = true;
 });
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
-  console.log(mistakes.value);
 }
 
 function pencilClick() {
@@ -35,7 +36,10 @@ function onInput(input: InputType, payload: number) {
   switch (input) {
     case InputType.PLACE:
       // cell insertion
-      placeNumber(payload);
+      placeNumber(payload, pencil.value);
+      break;
+    case InputType.PENCILPLACE:
+      placeNumber(payload, true);
       break;
     case InputType.REMOVE:
       // cell deletion
@@ -58,14 +62,16 @@ function onInput(input: InputType, payload: number) {
   }
 }
 
-function placeNumber(num: number) {
+function placeNumber(num: number, pencil: boolean) {
   const idx = selectedCell.value;
-  sudoku.placeNumber(idx, num);
+  sudoku.placeNumber(idx, num, pencil);
+  console.log(pencilMarks.value[idx]?.toString(2));
 }
 
 function removeNumber() {
   const idx = selectedCell.value;
   sudoku.removeNumber(idx);
+  console.log(pencilMarks.value[idx]?.toString(2));
 }
 </script>
 
@@ -80,6 +86,7 @@ function removeNumber() {
       :mistakes
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"
+      :pencil-marks="pencilMarks"
       @cell-click="cellClick"
       @on-input="onInput"
     />

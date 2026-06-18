@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import { InputType } from './types';
+import Marks from './Marks.vue';
 
 const props = defineProps<{
   board: number[];
   mistakes: Set<number>;
   selectedCell: number;
   initialClues: boolean[];
+  pencilMarks: number[];
 }>();
 
 const emit = defineEmits<{
   (e: 'cell-click', idx: number): void;
+  (e: 'pencil-click'): void;
   (e: 'on-input', input: InputType, payload: number): void;
 }>();
 
@@ -33,8 +36,14 @@ function onInput(event: KeyboardEvent) {
     case 'Digit8':
     case 'Digit9':
       // cell insertion
-      const num = parseInt(code.at(-1)!, 10);
-      emit('on-input', InputType.PLACE, num);
+      if (!event.shiftKey) {
+        const num = parseInt(code.at(-1)!, 10);
+        emit('on-input', InputType.PLACE, num);
+      } else {
+        const num = parseInt(code.at(-1)!, 10);
+        emit('on-input', InputType.PENCILPLACE, num);
+      }
+      // mark insertion
       break;
     case 'Backspace':
     case 'Delete':
@@ -111,6 +120,9 @@ onUnmounted(() => window.removeEventListener('keydown', onInput));
         class="flex justify-center items-center cursor-pointer font-bold select-none text-xl sm:text-2xl transition-colors duration-150 aspect-square"
       >
         <span v-if="val !== 0">{{ val }}</span>
+        <span v-else-if="props.pencilMarks[idx] !== 0"
+          ><Marks :marks="props.pencilMarks[idx]"
+        /></span>
       </div>
     </div>
   </div>

@@ -5,7 +5,7 @@ export class Board {
   public board: number[];
   public initialClues: boolean[];
   public mistakes = new Set<number>();
-  public pencilMarks: Int32Array = new Int32Array(81).fill(0);
+  public pencilMarks: number[] = Array(81).fill(0);
 
   private solver = new Solver();
 
@@ -24,11 +24,21 @@ export class Board {
    * @param num - The number to place
    * @returns true if success, false otherwise.
    */
-  public placeNumber(idx: number, num: number) {
+  public placeNumber(idx: number, num: number, pencil: boolean = false) {
     if (this.initialClues[idx]) {
       return false;
     }
+    if (pencil) {
+      // Do not toggle mark if board has a number in it
+      if (this.board[idx] !== 0) return false;
+      const bit = 1 << num;
+      this.pencilMarks[idx]! ^= bit; // toggle mark on or off
+      return true;
+    }
+
     this.board[idx] = num;
+    // remove all marks after placing number
+    this.pencilMarks[idx] = 0;
     this.evalMistakes();
     return true;
   }
@@ -43,9 +53,14 @@ export class Board {
     if (this.initialClues[idx]) {
       return false;
     }
-    this.board[idx] = 0;
-    this.evalMistakes();
-    return true;
+    // Always remove everything.
+    if (this.board[idx] !== 0) {
+      this.board[idx] = 0;
+      this.evalMistakes();
+      return true;
+    } else {
+      this.pencilMarks[idx] = 0;
+    }
   }
 
   /**
