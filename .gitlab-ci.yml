@@ -14,7 +14,7 @@ build_game:
     - apt-get update && apt-get install -y wget xz-utils
     - wget https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
     - tar -xf zig-x86_64-linux-0.16.0.tar.xz
-    - export PATH=$PATH:$(pwd)/zig-linux-x86_64-0.16.0
+    - export PATH=$PATH:$(pwd)/zig-x86_64-linux-0.16.0
     - zig version
   script:
     - npm install -g bun
