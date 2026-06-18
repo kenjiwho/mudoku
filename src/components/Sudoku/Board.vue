@@ -131,7 +131,7 @@ onUnmounted(() => {
         class="flex justify-center items-center cursor-pointer font-bold select-none text-xl sm:text-2xl transition-colors duration-150 aspect-square"
       >
         <span v-if="val !== 0">{{ val }}</span>
-        <Marks v-else-if="props.pencilMarks[idx] !== 0" :marks="props.pencilMarks[idx]" />
+        <Marks v-else-if="props.pencilMarks[idx] !== 0" :marks="props.pencilMarks[idx]!" />
       </div>
     </div>
   </div>
