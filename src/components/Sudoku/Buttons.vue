@@ -6,8 +6,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'pencil-click'): void;
-  (e: 'on-input', input: InputType, payload: number): void;
+  (e: 'on-input', input: InputType, payload: any): void;
 }>();
 
 const number_buttons = [1, 2, 3, 4, 5, -1, 6, 7, 8, 9, 0];
@@ -18,7 +17,7 @@ function onClickNumber(button: number) {
   } else if (button === 0) {
     emit('on-input', InputType.REMOVE, -1);
   } else {
-    emit('pencil-click');
+    emit('on-input', InputType.PENCIL, !props.pencil);
   }
 }
 

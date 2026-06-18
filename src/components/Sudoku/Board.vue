@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
-import { InputType } from './types';
-import Marks from './Marks.vue';
+import { onMounted, onUnmounted } from "vue";
+import { InputType } from "./types";
+import Marks from "./Marks.vue";
 
 const props = defineProps<{
   board: number[];
@@ -12,12 +12,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'cell-click', idx: number): void;
-  (e: 'pencil-click'): void;
-  (e: 'on-input', input: InputType, payload: number): void;
+  (e: "cell-click", idx: number): void;
+  (e: "on-input", input: InputType, payload: any): void;
 }>();
 
-function onInput(event: KeyboardEvent) {
+function onKeyDown(event: KeyboardEvent) {
   const code = event.code;
 
   // if no cell is selected: ignore
@@ -26,58 +25,64 @@ function onInput(event: KeyboardEvent) {
   }
 
   switch (code) {
-    case 'Digit1':
-    case 'Digit2':
-    case 'Digit3':
-    case 'Digit4':
-    case 'Digit5':
-    case 'Digit6':
-    case 'Digit7':
-    case 'Digit8':
-    case 'Digit9':
+    case "Digit1":
+    case "Digit2":
+    case "Digit3":
+    case "Digit4":
+    case "Digit5":
+    case "Digit6":
+    case "Digit7":
+    case "Digit8":
+    case "Digit9":
       // cell insertion
-      if (!event.shiftKey) {
-        const num = parseInt(code.at(-1)!, 10);
-        emit('on-input', InputType.PLACE, num);
-      } else {
-        const num = parseInt(code.at(-1)!, 10);
-        emit('on-input', InputType.PENCILPLACE, num);
-      }
-      // mark insertion
+      const num = parseInt(code.at(-1)!, 10);
+      emit("on-input", InputType.PLACE, num);
       break;
-    case 'Backspace':
-    case 'Delete':
-    case 'Digit0':
-    case 'Escape':
+    case "Backspace":
+    case "Delete":
+    case "Digit0":
+    case "Escape":
       // cell deletion
-      emit('on-input', InputType.REMOVE, -1);
+      emit("on-input", InputType.REMOVE, -1);
       break;
     // move selection with arrows
-    case 'ArrowUp':
-    case 'KeyW':
+    case "ArrowUp":
+    case "KeyW":
       if (props.selectedCell > 8) {
-        emit('on-input', InputType.UP, -1);
+        emit("on-input", InputType.UP, -1);
       }
       break;
-    case 'ArrowDown':
-    case 'KeyS':
+    case "ArrowDown":
+    case "KeyS":
       if (props.selectedCell < 72) {
-        emit('on-input', InputType.DOWN, -1);
+        emit("on-input", InputType.DOWN, -1);
       }
       break;
-    case 'ArrowLeft':
-    case 'KeyA':
+    case "ArrowLeft":
+    case "KeyA":
       if (props.selectedCell % 9 != 0) {
-        emit('on-input', InputType.LEFT, -1);
+        emit("on-input", InputType.LEFT, -1);
       }
       break;
-    case 'ArrowRight':
-    case 'KeyD':
+    case "ArrowRight":
+    case "KeyD":
       if ((props.selectedCell + 1) % 9 != 0) {
-        emit('on-input', InputType.RIGHT, -1);
+        emit("on-input", InputType.RIGHT, -1);
       }
+      break;
+    case "ShiftLeft":
+      emit("on-input", InputType.PENCIL, true);
+      break;
     default:
       break;
+  }
+}
+
+function onKeyUp(event: KeyboardEvent) {
+  const code = event.code;
+
+  if (code === "ShiftLeft") {
+    emit("on-input", InputType.PENCIL, false)
   }
 }
 
@@ -88,23 +93,29 @@ function getCellClasses(idx: number) {
 
   return {
     // Standard Tailwind borders for every cell
-    'border border-slate-300 dark:border-slate-500/40': true,
+    "border border-slate-300 dark:border-slate-500/40": true,
     // Thick borders to isolate the 3x3 boxes visually
-    'border-b-slate-900 dark:border-b-slate-500': row === 2 || row === 5,
-    'border-r-slate-900 dark:border-r-slate-500': col === 2 || col === 5,
-    'border-t-slate-900 dark:border-t-slate-500': row === 3 || row === 6,
-    'border-l-slate-900 dark:border-l-slate-500': col === 3 || col === 6,
+    "border-b-slate-900 dark:border-b-slate-500": row === 2 || row === 5,
+    "border-r-slate-900 dark:border-r-slate-500": col === 2 || col === 5,
+    "border-t-slate-900 dark:border-t-slate-500": row === 3 || row === 6,
+    "border-l-slate-900 dark:border-l-slate-500": col === 3 || col === 6,
     // Highlight if selected
-    'ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10': props.selectedCell === idx,
+    "ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10": props.selectedCell === idx,
     // Visual styling for locked initial clues vs user inputs
-    'text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800': props.initialClues[idx],
+    "text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800": props.initialClues[idx],
     // red background for mistakes
-    'bg-red-500! dark:bg-red-900!': props.mistakes.has(idx),
+    "bg-red-500! dark:bg-red-900!": props.mistakes.has(idx),
   };
 }
 
-onMounted(() => window.addEventListener('keydown', onInput));
-onUnmounted(() => window.removeEventListener('keydown', onInput));
+onMounted(() => {
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+});
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeyDown)
+  window.removeEventListener("keyup", onKeyUp)
+});
 </script>
 
 <template>
@@ -120,9 +131,7 @@ onUnmounted(() => window.removeEventListener('keydown', onInput));
         class="flex justify-center items-center cursor-pointer font-bold select-none text-xl sm:text-2xl transition-colors duration-150 aspect-square"
       >
         <span v-if="val !== 0">{{ val }}</span>
-        <span v-else-if="props.pencilMarks[idx] !== 0"
-          ><Marks :marks="props.pencilMarks[idx]"
-        /></span>
+        <Marks v-else-if="props.pencilMarks[idx] !== 0" :marks="props.pencilMarks[idx]" />
       </div>
     </div>
   </div>

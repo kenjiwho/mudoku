@@ -60,6 +60,7 @@ export class Board {
       return true;
     } else {
       this.pencilMarks[idx] = 0;
+      return true;
     }
   }
 

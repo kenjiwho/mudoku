@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Board } from '@/sudoku/board';
-import { onMounted, ref } from 'vue';
-import BoardGrid from './Board.vue';
-import { InputType } from './types';
-import { generate, initSudokuEngine } from '@/sudoku/engine';
-import Buttons from './Buttons.vue';
+import { Board } from "@/sudoku/board";
+import { onMounted, ref } from "vue";
+import BoardGrid from "./Board.vue";
+import { InputType } from "./types";
+import { generate, initSudokuEngine } from "@/sudoku/engine";
+import Buttons from "./Buttons.vue";
 
 const isLoaded = ref(false);
 
@@ -14,6 +14,7 @@ const pencilMarks = ref([0]);
 let sudoku: Board;
 const selectedCell = ref(-1);
 const pencil = ref(false);
+const renderTrigger = ref(0);
 
 onMounted(async () => {
   await initSudokuEngine();
@@ -32,14 +33,11 @@ function pencilClick() {
   pencil.value = !pencil.value;
 }
 
-function onInput(input: InputType, payload: number) {
+function onInput(input: InputType, payload: any) {
   switch (input) {
     case InputType.PLACE:
       // cell insertion
       placeNumber(payload, pencil.value);
-      break;
-    case InputType.PENCILPLACE:
-      placeNumber(payload, true);
       break;
     case InputType.REMOVE:
       // cell deletion
@@ -57,6 +55,10 @@ function onInput(input: InputType, payload: number) {
       break;
     case InputType.RIGHT:
       selectedCell.value += 1;
+      break;
+    case InputType.PENCIL:
+      pencil.value = payload;
+      break;
     default:
       break;
   }
@@ -64,14 +66,16 @@ function onInput(input: InputType, payload: number) {
 
 function placeNumber(num: number, pencil: boolean) {
   const idx = selectedCell.value;
-  sudoku.placeNumber(idx, num, pencil);
-  console.log(pencilMarks.value[idx]?.toString(2));
+  if (sudoku.placeNumber(idx, num, pencil)) {
+    renderTrigger.value++;
+  }
 }
 
 function removeNumber() {
   const idx = selectedCell.value;
-  sudoku.removeNumber(idx);
-  console.log(pencilMarks.value[idx]?.toString(2));
+  if (sudoku.removeNumber(idx)) {
+    renderTrigger.value++;
+  }
 }
 </script>
 
@@ -82,6 +86,7 @@ function removeNumber() {
   </div>
   <div v-else>
     <BoardGrid
+      :key="renderTrigger"
       :board
       :mistakes
       :selected-cell="selectedCell"
