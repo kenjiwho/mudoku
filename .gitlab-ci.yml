@@ -12,7 +12,7 @@ build_game:
   before_script:
     # download zig
     - apt-get update && apt-get install -y wget xz-utils
-    - wget https://ziglang.org/download/0.16.0/zig-linux-x86_64-0.16.0.tar.xz
+    - wget https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
     - tar -xf zig-linux-x86_64-0.16.0.tar.xz
     - export PATH=$PATH:$(pwd)/zig-linux-x86_64-0.16.0
     - zig version
