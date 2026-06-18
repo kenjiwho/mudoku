@@ -9,6 +9,13 @@ build_game:
   stage: build
   only:
     - master
+  before_script:
+    # download zig
+    - apt-get update && apt-get install -y wget xz-utils
+    - wget https://ziglang.org/download/0.16.0/zig-linux-x86_64-0.16.0.tar.xz
+    - tar -xf zig-linux-x86_64-0.16.0.tar.xz
+    - export PATH=$PATH:$(pwd)/zig-linux-x86_64-0.16.0
+    - zig version
   script:
     - npm install -g bun
     - bun install
