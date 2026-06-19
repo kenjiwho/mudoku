@@ -1,26 +1,57 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { generateRandomCode } from "../helper";
+import { ref as dbRef, get } from "firebase/database";
+import { database } from "@/firebase";
 
 const router = useRouter();
 const joinRoomId = ref("");
+const playerId = ref("");
+const username = ref("");
 
-function generateRoomCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+onMounted(() => {
+  username.value = localStorage.getItem("username") || "Player";
+  playerId.value = localStorage.getItem("playerId") || crypto.randomUUID();
+});
+
+function savePlayerData() {
+  localStorage.setItem("username", username.value);
+  localStorage.setItem("playerId", playerId.value);
 }
 
-function createRoom() {
-  const newRoomId = generateRoomCode();
-  // Later, you can initialize Firebase database data for this room right here!
+async function createRoom() {
+  let newRoomId = "";
+  let unique = false;
 
-  router.push({ name: "room", params: { roomId: newRoomId } });
+  while (!unique) {
+    newRoomId = generateRandomCode(6);
+    const roomRef = dbRef(database, `rooms/${newRoomId}`);
+    const snapshot = await get(roomRef);
+    unique = !snapshot.exists();
+  }
+
+  console.log(playerId.value, username.value);
+  savePlayerData();
+
+  router.push({
+    name: "room",
+    params: { roomId: newRoomId },
+  });
 }
 
 function joinRoom() {
   if (joinRoomId.value.trim() === "") return;
-  const cleanedId = joinRoomId.value.trim().toUpperCase();
+  const cleanedId = joinRoomId.value.trim();
 
-  router.push({ name: "room", params: { roomId: cleanedId } });
+  if (!/^[A-Za-z0-9]{6}$/.test(cleanedId)) return;
+
+  savePlayerData();
+
+  router.push({
+    name: "room",
+    params: { roomId: cleanedId },
+  });
 }
 </script>
 
@@ -30,6 +61,19 @@ function joinRoom() {
       <h1 class="text-5xl font-black mb-2 tracking-tight text-blue-600 dark:text-blue-500">
         Mudoku
       </h1>
+    </div>
+
+    <div class="w-full flex items-center space-x-4">
+      <div class="text-lg font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+        Username
+      </div>
+
+      <input
+        v-model="username"
+        type="text"
+        placeholder="Enter your username"
+        class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-transparent focus:border-blue-500 focus:outline-none transition-colors"
+      />
     </div>
 
     <button
@@ -45,7 +89,7 @@ function joinRoom() {
         @keyup.enter="joinRoom"
         type="text"
         placeholder="Enter Room Code"
-        class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-transparent uppercase focus:border-blue-500 focus:outline-none transition-colors"
+        class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-transparent focus:border-blue-500 focus:outline-none transition-colors"
         maxlength="6"
       />
       <button

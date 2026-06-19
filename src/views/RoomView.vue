@@ -14,7 +14,7 @@ function leaveRoom() {
 
 <template>
   <div class="w-full flex flex-col items-center">
-    <div class="w-full max-w-[500px] flex justify-between items-center mb-4 px-4">
+    <div class="w-full max-w-125 flex justify-between items-center mb-4 px-4">
       <button
         @click="leaveRoom"
         class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"

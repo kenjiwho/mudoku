@@ -1,4 +1,4 @@
-import { getBoxIndex, unionInplace } from './helper';
+import { getBoxIndex, unionInplace } from '../helper';
 import { Solver, StepType } from './solver';
 
 export class Board {

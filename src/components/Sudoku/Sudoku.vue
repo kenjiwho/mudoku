@@ -1,19 +1,34 @@
 <script setup lang="ts">
 import { Board } from "@/sudoku/board";
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import BoardGrid from "./Board.vue";
 import { InputType } from "./types";
 import { generate, initSudokuEngine } from "@/sudoku/engine";
 import Buttons from "./Buttons.vue";
-import { ref as dbRef, get, set, onChildChanged } from "firebase/database";
+import {
+  ref as dbRef,
+  get,
+  set,
+  onChildChanged,
+  onDisconnect,
+  remove,
+  push,
+  onValue,
+  type ThenableReference,
+  update,
+} from "firebase/database";
 import { database } from "@/firebase";
 
 const props = defineProps<{
   roomId: string;
 }>();
 
-const isLoaded = ref(false);
+const playerId = localStorage.getItem("playerId") || crypto.randomUUID();
+const username = localStorage.getItem("username") || "Player";
+console.log(playerId, username);
 
+const roomPath = `rooms/${props.roomId}`;
+const isLoaded = ref(false);
 const board = ref([0]);
 const mistakes = ref(new Set<number>());
 const pencilMarks = ref([0]);
@@ -22,14 +37,38 @@ const selectedCell = ref(-1);
 const pencil = ref(false);
 const renderTrigger = ref(0);
 
+const playerRef = dbRef(database, roomPath + `/players/${playerId}`);
+const connectedRef = dbRef(database, ".info/connected");
+let activeConnectionRef: ThenableReference;
+// on connection
+onValue(connectedRef, (snapshot) => {
+  if (snapshot.val()) {
+    const con = push(playerRef);
+    activeConnectionRef = con;
+    // callback to remove player data on disconnect
+    onDisconnect(con).remove();
+    // add player data
+    set(con, { username: username, joined: Date.now() });
+  }
+});
+// on leave without disconnect (back button)
+onUnmounted(() => {
+  if (activeConnectionRef) {
+    // cancel server-side disconnect
+    onDisconnect(activeConnectionRef).cancel();
+    // remove connection from the database
+    remove(activeConnectionRef);
+  }
+});
+
 onMounted(async () => {
   await initSudokuEngine();
 
-  const roomRef = dbRef(database, `rooms/${props.roomId}`);
+  const roomRef = dbRef(database, roomPath);
   const snapshot = await get(roomRef);
 
-  if (snapshot.exists()) {
-    // room exists, downloda board state
+  if (snapshot.exists() && snapshot.hasChild("initialBoard")) {
+    // room and board exists, downloda board state
     const data = snapshot.val();
     // get initial board state
     const initialBoardData = data.initialBoard || [];
@@ -54,11 +93,11 @@ onMounted(async () => {
     board.value = [...initialBoardData];
     sudoku = new Board(board.value);
 
-    await set(roomRef, {
+    await update(roomRef, {
       initialBoard: initialBoardData,
       board: initialBoardData,
       pencilMarks: sudoku.pencilMarks,
-    })
+    });
   }
 
   mistakes.value = sudoku.mistakes;
@@ -66,12 +105,12 @@ onMounted(async () => {
   isLoaded.value = true;
 
   // LIVE SYNC between players
-  onChildChanged(dbRef(database, `rooms/${props.roomId}/board`), (snapshot) => {
+  onChildChanged(dbRef(database, roomPath + "/board"), (snapshot) => {
     const idx = parseInt(snapshot.key!, 10);
     const val = snapshot.val();
     sudoku.placeNumber(idx, val, false);
   });
-  onChildChanged(dbRef(database, `rooms/${props.roomId}/pencilMarks`), (snapshot) => {
+  onChildChanged(dbRef(database, roomPath + "/pencilMarks"), (snapshot) => {
     const idx = parseInt(snapshot.key!, 10);
     const val = snapshot.val();
     sudoku.placePencilMarks(idx, val);
@@ -120,9 +159,9 @@ function placeNumber(num: number, pencil: boolean) {
     renderTrigger.value++;
 
     if (!pencil) {
-      set(dbRef(database, `rooms/${props.roomId}/board/${idx}`), num);
+      set(dbRef(database, roomPath + `/board/${idx}`), num);
     } else {
-      set(dbRef(database, `rooms/${props.roomId}/pencilMarks/${idx}`), sudoku.pencilMarks[idx]);
+      set(dbRef(database, roomPath + `/pencilMarks/${idx}`), sudoku.pencilMarks[idx]);
     }
   }
 }
@@ -132,8 +171,8 @@ function removeNumber() {
   if (sudoku.removeNumber(idx)) {
     renderTrigger.value++;
 
-    set(dbRef(database, `rooms/${props.roomId}/board/${idx}`), 0);
-    set(dbRef(database, `rooms/${props.roomId}/pencilMarks/${idx}`), 0);
+    set(dbRef(database, roomPath + `/board/${idx}`), 0);
+    set(dbRef(database, roomPath + `/pencilMarks/${idx}`), 0);
   }
 }
 </script>

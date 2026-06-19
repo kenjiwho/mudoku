@@ -60,3 +60,17 @@ export function unionInplace<T>(setA: Set<T>, setB: Set<T>) {
     setA.add(item);
   }
 }
+
+/**
+ *
+ * @param length - Length of the code.
+ * @returns The generated random code.
+ */
+export function generateRandomCode(length: number) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}

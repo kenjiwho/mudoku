@@ -1,5 +1,5 @@
 import initWasm from '../assets/bin/sudoku.wasm?init';
-import { randomU64 } from './helper';
+import { randomU64 } from '../helper';
 
 interface SudokuApi {
   memory: WebAssembly.Memory;

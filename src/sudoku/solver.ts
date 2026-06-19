@@ -1,4 +1,4 @@
-import { getBoxIndex, locActiveBit, shuffle } from './helper';
+import { getBoxIndex, locActiveBit, shuffle } from '../helper';
 
 export enum StepType {
   NAKEDSINGLE,
