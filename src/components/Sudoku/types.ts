@@ -7,3 +7,10 @@ export enum InputType {
   RIGHT,
   PENCIL,
 }
+
+export interface Player {
+  playerId: string;
+  username: string;
+  selectedCell: number;
+  joined: number;
+}

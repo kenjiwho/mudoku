@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
-import { InputType } from "./types";
+import { InputType, Player } from "./types";
 import Marks from "./Marks.vue";
 
 const props = defineProps<{
@@ -9,6 +9,7 @@ const props = defineProps<{
   selectedCell: number;
   initialClues: boolean[];
   pencilMarks: number[];
+  playersList: Record<string, Player>;
 }>();
 
 const emit = defineEmits<{
@@ -82,7 +83,7 @@ function onKeyUp(event: KeyboardEvent) {
   const code = event.code;
 
   if (code === "ShiftLeft") {
-    emit("on-input", InputType.PENCIL, false)
+    emit("on-input", InputType.PENCIL, false);
   }
 }
 
@@ -90,6 +91,14 @@ function onKeyUp(event: KeyboardEvent) {
 function getCellClasses(idx: number) {
   const row = Math.trunc(idx / 9);
   const col = idx % 9;
+
+  let selectedCell = false;
+  for (const uuid in props.playersList) {
+    if (props.playersList[uuid]!.selectedCell === idx) {
+      selectedCell = true;
+      break;
+    }
+  }
 
   return {
     // Standard Tailwind borders for every cell
@@ -100,7 +109,7 @@ function getCellClasses(idx: number) {
     "border-t-slate-900 dark:border-t-slate-500": row === 3 || row === 6,
     "border-l-slate-900 dark:border-l-slate-500": col === 3 || col === 6,
     // Highlight if selected
-    "ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10": props.selectedCell === idx,
+    "ring-2 ring-inset ring-blue-500 dark:ring-blue-600 z-10": selectedCell,
     // Visual styling for locked initial clues vs user inputs
     "text-slate-800 dark:text-slate-400 bg-slate-200 dark:bg-slate-800": props.initialClues[idx],
     // red background for mistakes
@@ -113,8 +122,8 @@ onMounted(() => {
   window.addEventListener("keyup", onKeyUp);
 });
 onUnmounted(() => {
-  window.removeEventListener("keydown", onKeyDown)
-  window.removeEventListener("keyup", onKeyUp)
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
 });
 </script>
 

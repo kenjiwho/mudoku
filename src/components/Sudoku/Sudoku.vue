@@ -2,7 +2,7 @@
 import { Board } from "@/sudoku/board";
 import { onMounted, onUnmounted, ref } from "vue";
 import BoardGrid from "./Board.vue";
-import { InputType } from "./types";
+import { InputType, Player } from "./types";
 import { generate, initSudokuEngine } from "@/sudoku/engine";
 import Buttons from "./Buttons.vue";
 import {
@@ -25,7 +25,6 @@ const props = defineProps<{
 
 const playerId = localStorage.getItem("playerId") || crypto.randomUUID();
 const username = localStorage.getItem("username") || "Player";
-console.log(playerId, username);
 
 const roomPath = `rooms/${props.roomId}`;
 const isLoaded = ref(false);
@@ -36,8 +35,14 @@ let sudoku: Board;
 const selectedCell = ref(-1);
 const pencil = ref(false);
 const renderTrigger = ref(0);
+const playersList = ref<Record<string, Player>>({});
+
+let unsubscribeBoard: () => void;
+let unsubscribePencilMarks: () => void;
+let unsubscribePlayers: () => void;
 
 const playerRef = dbRef(database, roomPath + `/players/${playerId}`);
+const allPlayersRef = dbRef(database, roomPath + `/players`);
 const connectedRef = dbRef(database, ".info/connected");
 let activeConnectionRef: ThenableReference;
 // on connection
@@ -59,6 +64,9 @@ onUnmounted(() => {
     // remove connection from the database
     remove(activeConnectionRef);
   }
+  if (unsubscribeBoard) unsubscribeBoard();
+  if (unsubscribePencilMarks) unsubscribePencilMarks();
+  if (unsubscribePlayers) unsubscribePlayers();
 });
 
 onMounted(async () => {
@@ -88,7 +96,7 @@ onMounted(async () => {
       }
     }
   } else {
-    // room does not exist, generate new board
+    // room or board does not exist, generate new board
     const initialBoardData = generate();
     board.value = [...initialBoardData];
     sudoku = new Board(board.value);
@@ -105,21 +113,47 @@ onMounted(async () => {
   isLoaded.value = true;
 
   // LIVE SYNC between players
-  onChildChanged(dbRef(database, roomPath + "/board"), (snapshot) => {
-    const idx = parseInt(snapshot.key!, 10);
-    const val = snapshot.val();
+  unsubscribeBoard = onChildChanged(dbRef(database, roomPath + "/board"), (snap) => {
+    const idx = parseInt(snap.key!, 10);
+    const val = snap.val();
     sudoku.placeNumber(idx, val, false);
   });
-  onChildChanged(dbRef(database, roomPath + "/pencilMarks"), (snapshot) => {
-    const idx = parseInt(snapshot.key!, 10);
-    const val = snapshot.val();
-    sudoku.placePencilMarks(idx, val);
-    renderTrigger.value++;
+  unsubscribePencilMarks = onChildChanged(
+    dbRef(database, roomPath + "/pencilMarks"),
+    (snap) => {
+      const idx = parseInt(snap.key!, 10);
+      const val = snap.val();
+      sudoku.placePencilMarks(idx, val);
+      renderTrigger.value++;
+    },
+  );
+  // keep track of player data
+  unsubscribePlayers = onValue(allPlayersRef, (snap) => {
+    // if player data changes, update the players list with new data
+    if (snap.exists()) {
+      const rawPlayers = snap.val();
+      const newPlayersList: Record<string, Player> = {};
+      for (const uuid in rawPlayers) {
+        const connections = rawPlayers[uuid];
+        // list of all active connections for this player
+        const allPlayerData = Object.values(connections) as any[];
+        // get the latest player data (last connection in the list)
+        const latestPlayerData = allPlayerData[allPlayerData.length - 1] as Player;
+        newPlayersList[uuid] = latestPlayerData as Player;
+      }
+      playersList.value = newPlayersList;
+    } else {
+      playersList.value = {};
+    }
   });
 });
 
 function cellClick(idx: number) {
   selectedCell.value = idx;
+  // update selectedCell in player data
+  if (activeConnectionRef) {
+    update(activeConnectionRef, { selectedCell: idx });
+  }
 }
 
 function onInput(input: InputType, payload: any) {
@@ -134,16 +168,16 @@ function onInput(input: InputType, payload: any) {
       break;
     // move selection with arrows
     case InputType.UP:
-      selectedCell.value -= 9;
+      cellClick(selectedCell.value - 9);
       break;
     case InputType.DOWN:
-      selectedCell.value += 9;
+      cellClick(selectedCell.value + 9);
       break;
     case InputType.LEFT:
-      selectedCell.value -= 1;
+      cellClick(selectedCell.value - 1);
       break;
     case InputType.RIGHT:
-      selectedCell.value += 1;
+      cellClick(selectedCell.value + 1);
       break;
     case InputType.PENCIL:
       pencil.value = payload;
@@ -190,6 +224,7 @@ function removeNumber() {
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"
       :pencil-marks="pencilMarks"
+      :players-list="playersList"
       @cell-click="cellClick"
       @on-input="onInput"
     />

@@ -31,7 +31,6 @@ async function createRoom() {
     unique = !snapshot.exists();
   }
 
-  console.log(playerId.value, username.value);
   savePlayerData();
 
   router.push({
