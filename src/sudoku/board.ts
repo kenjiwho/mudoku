@@ -65,6 +65,16 @@ export class Board {
   }
 
   /**
+   * Place pencil marks on the board.
+   *
+   * @param idx - The index where to place pencil marks.
+   * @param marks - The pencil marks to place.
+   */
+  public placePencilMarks(idx: number, marks: number) {
+    this.pencilMarks[idx] = marks;
+  }
+
+  /**
    * Add the mistakes for a specific index and number.
    *
    * @param idx - Index of num.
