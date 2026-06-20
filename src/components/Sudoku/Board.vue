@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
-import { InputType, Player } from "./types";
+import { InputType, type Player } from "./types";
 import Marks from "./Marks.vue";
 
 const props = defineProps<{

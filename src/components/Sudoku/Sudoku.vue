@@ -2,7 +2,7 @@
 import { Board } from "@/sudoku/board";
 import { onMounted, onUnmounted, ref } from "vue";
 import BoardGrid from "./Board.vue";
-import { InputType, Player } from "./types";
+import { InputType, type Player } from "./types";
 import { generate, initSudokuEngine } from "@/sudoku/engine";
 import Buttons from "./Buttons.vue";
 import {
