@@ -44,24 +44,15 @@ export class Board {
   }
 
   /**
-   * Remove a number on the board.
+   * Return true if the board is solved.
    *
-   * @param idx - The index where to remove a number.
-   * @returns true if success, false otherwise.
+   * @returns true if the board is solved, false otherwise.
    */
-  public removeNumber(idx: number) {
-    if (this.initialClues[idx]) {
+  public solved(): boolean {
+    if (this.board.includes(0) || this.mistakes.size !== 0) {
       return false;
     }
-    // Always remove everything.
-    if (this.board[idx] !== 0) {
-      this.board[idx] = 0;
-      this.evalMistakes();
-      return true;
-    } else {
-      this.pencilMarks[idx] = 0;
-      return true;
-    }
+    return true;
   }
 
   /**
