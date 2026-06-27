@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
-import BoardGrid from "./Board.vue";
-import Buttons from "./Buttons.vue";
-import Popup from "./Popup.vue";
-import { Board } from "@/sudoku/board";
-import { generate, initSudokuEngine } from "@/sudoku/engine";
-import { InputType, type Player } from "./types";
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import BoardGrid from './Board.vue';
+import Buttons from './Buttons.vue';
+import Popup from './Popup.vue';
+import { Board } from '@/sudoku/board';
+import { generate, initSudokuEngine } from '@/sudoku/engine';
+import { InputType, type Player } from './types';
 import {
   ref as dbRef,
   get,
@@ -17,15 +17,15 @@ import {
   onValue,
   type ThenableReference,
   update,
-} from "firebase/database";
-import { database } from "@/firebase";
+} from 'firebase/database';
+import { database } from '@/firebase';
 
 const props = defineProps<{
   roomId: string;
 }>();
 
-const playerId = localStorage.getItem("playerId") || crypto.randomUUID();
-const username = localStorage.getItem("username") || "Player";
+const playerId = localStorage.getItem('playerId') || crypto.randomUUID();
+const username = localStorage.getItem('username') || 'Player';
 
 const roomPath = `rooms/${props.roomId}`;
 const isLoaded = ref(false);
@@ -52,7 +52,7 @@ onMounted(async () => {
   const roomRef = dbRef(database, roomPath);
   const snapshot = await get(roomRef);
 
-  if (snapshot.exists() && snapshot.hasChild("initialBoard")) {
+  if (snapshot.exists() && snapshot.hasChild('initialBoard')) {
     // room and board exists, downloda board state
     const data = snapshot.val();
     // get initial board state
@@ -90,7 +90,7 @@ onMounted(async () => {
 
   const playerRef = dbRef(database, roomPath + `/players/${playerId}`);
   const allPlayersRef = dbRef(database, roomPath + `/players`);
-  const connectedRef = dbRef(database, ".info/connected");
+  const connectedRef = dbRef(database, '.info/connected');
   // on connection
   unsubscribeConnection = onValue(connectedRef, (snapshot) => {
     if (snapshot.val()) {
@@ -104,7 +104,7 @@ onMounted(async () => {
   });
 
   // LIVE SYNC between players
-  unsubscribeBoard = onChildChanged(dbRef(database, roomPath + "/board"), (snap) => {
+  unsubscribeBoard = onChildChanged(dbRef(database, roomPath + '/board'), (snap) => {
     const idx = parseInt(snap.key!, 10);
     const val = snap.val();
     // check if the value already exists in the board, if not, update it
@@ -112,7 +112,7 @@ onMounted(async () => {
       placeNumber(idx, val, false);
     }
   });
-  unsubscribePencilMarks = onChildChanged(dbRef(database, roomPath + "/pencilMarks"), (snap) => {
+  unsubscribePencilMarks = onChildChanged(dbRef(database, roomPath + '/pencilMarks'), (snap) => {
     const idx = parseInt(snap.key!, 10);
     const val = snap.val();
     // check if the value already exists in the pencil marks, if not, update it
@@ -236,6 +236,7 @@ function popupCallback() {
       :selected-cell="selectedCell"
       :initial-clues="sudoku.initialClues"
       :pencil-marks="pencilMarks"
+      :player-id="playerId"
       :players-list="playersList"
       @cell-click="cellClick"
       @on-input="onInput"
@@ -243,7 +244,13 @@ function popupCallback() {
     <Buttons :pencil @on-input="onInput" />
   </div>
 
-  <Popup title="🎉" subtitle="The board is solved!" button-text="👍" :show-win-popup="showWinPopup" :callback="popupCallback" />
+  <Popup
+    title="🎉"
+    subtitle="The board is solved!"
+    button-text="👍"
+    :show-win-popup="showWinPopup"
+    :callback="popupCallback"
+  />
 </template>
 
 <style></style>

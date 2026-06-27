@@ -11,9 +11,7 @@ const props = defineProps<{
       :key="digit"
       class="text-[9px] sm:text-[12px] text-center text-slate-400 dark:text-slate-500"
     >
-      <span
-        v-if="(marks & (1 << digit)) !== 0"
-      >
+      <span v-if="(marks & (1 << digit)) !== 0">
         {{ digit }}
       </span>
     </div>
