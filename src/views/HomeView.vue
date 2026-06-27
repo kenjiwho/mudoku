@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import { generateRandomCode } from "../helper";
-import { ref as dbRef, get } from "firebase/database";
-import { database } from "@/firebase";
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { generateRandomCode } from '../helper';
+import { ref as dbRef, get } from 'firebase/database';
+import { database } from '@/firebase';
 
 const router = useRouter();
-const joinRoomId = ref("");
-const playerId = ref("");
-const username = ref("");
+const joinRoomId = ref('');
+const playerId = ref('');
+const username = ref('');
 
 onMounted(() => {
-  username.value = localStorage.getItem("username") || "Player";
-  playerId.value = localStorage.getItem("playerId") || crypto.randomUUID();
+  username.value = localStorage.getItem('username') || 'Player';
+  playerId.value = localStorage.getItem('playerId') || crypto.randomUUID();
 });
 
 function savePlayerData() {
-  localStorage.setItem("username", username.value);
-  localStorage.setItem("playerId", playerId.value);
+  localStorage.setItem('username', username.value);
+  localStorage.setItem('playerId', playerId.value);
 }
 
 async function createRoom() {
-  let newRoomId = "";
+  let newRoomId = '';
   let unique = false;
 
   while (!unique) {
@@ -34,21 +34,21 @@ async function createRoom() {
   savePlayerData();
 
   router.push({
-    name: "room",
+    name: 'room',
     params: { roomId: newRoomId },
   });
 }
 
 function joinRoom() {
-  if (joinRoomId.value.trim() === "") return;
-  const cleanedId = joinRoomId.value.trim();
+  if (joinRoomId.value.trim() === '') return;
+  const cleanedId = joinRoomId.value.trim().toUpperCase();
 
-  if (!/^[A-Za-z0-9]{6}$/.test(cleanedId)) return;
+  if (!/^[A-Z0-9]{6}$/.test(cleanedId)) return;
 
   savePlayerData();
 
   router.push({
-    name: "room",
+    name: 'room',
     params: { roomId: cleanedId },
   });
 }
@@ -86,6 +86,7 @@ function joinRoom() {
       <input
         v-model="joinRoomId"
         @keyup.enter="joinRoom"
+        @input="joinRoomId = joinRoomId.toUpperCase()"
         type="text"
         placeholder="Enter Room Code"
         class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-transparent focus:border-blue-500 focus:outline-none transition-colors"
